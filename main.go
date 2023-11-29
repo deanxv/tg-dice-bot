@@ -178,7 +178,7 @@ func handleStopCommand(bot *tgbotapi.BotAPI, msgConfig *tgbotapi.MessageConfig) 
 }
 
 func handleStartCommand(bot *tgbotapi.BotAPI, msgConfig *tgbotapi.MessageConfig) {
-	msgConfig.Text = "已开启"
+	msgConfig.Text = "已开启 1分钟后开注！"
 	sendMessage(bot, msgConfig)
 	go sendDice(bot, msgConfig.ChatID)
 }
