@@ -178,7 +178,7 @@ func handleStopCommand(bot *tgbotapi.BotAPI, msgConfig *tgbotapi.MessageConfig) 
 }
 
 func handleStartCommand(bot *tgbotapi.BotAPI, msgConfig *tgbotapi.MessageConfig) {
-	msgConfig.Text = "已开启 1分钟后开注！"
+	msgConfig.Text = "已开启 1分钟后开奖！"
 	sendMessage(bot, msgConfig)
 	go sendDice(bot, msgConfig.ChatID)
 }
@@ -231,7 +231,7 @@ func handleDiceRoll(bot *tgbotapi.BotAPI, chatID int64) {
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("开注历史", "betting_history"),
+			tgbotapi.NewInlineKeyboardButtonData("开奖历史", "betting_history"),
 		),
 	)
 
