@@ -197,7 +197,7 @@ func sendDice(bot *tgbotapi.BotAPI, chatID int64) {
 
 	stopFlags[chatID] = make(chan struct{})
 	go func(stopCh <-chan struct{}) {
-		ticker := time.NewTicker(10 * time.Second)
+		ticker := time.NewTicker(60 * time.Second)
 		defer ticker.Stop()
 
 		for {
