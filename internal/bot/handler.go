@@ -36,7 +36,7 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQ
 func handleBettingHistoryQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery) {
 	records, err := model.GetAllRecordsByChatID(db, callbackQuery.Message.Chat.ID)
 	if err != nil {
-		log.Println("获取开奖历史错误:", err)
+		log.Println("获取开奖历史异常:", err)
 		return
 	}
 	msgText := generateBettingHistoryMessage(records)
@@ -44,7 +44,7 @@ func handleBettingHistoryQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Cal
 
 	sentMsg, err := bot.Send(msg)
 	if err != nil {
-		log.Println("发送消息错误:", err)
+		log.Println("发送消息异常:", err)
 	}
 
 	go func(messageID int) {
@@ -52,7 +52,7 @@ func handleBettingHistoryQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Cal
 		deleteMsg := tgbotapi.NewDeleteMessage(callbackQuery.Message.Chat.ID, messageID)
 		_, err := bot.Request(deleteMsg)
 		if err != nil {
-			log.Println("删除消息错误:", err)
+			log.Println("删除消息异常:", err)
 		}
 	}(sentMsg.MessageID)
 }
@@ -80,7 +80,7 @@ func handleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 
 	chatMember, err := getChatMember(bot, chatID, int(user.ID))
 	if err != nil {
-		log.Println("获取聊天成员错误:", err)
+		log.Println("获取聊天成员异常:", err)
 		return
 	}
 
@@ -117,18 +117,17 @@ func handleBettingCommand(bot *tgbotapi.BotAPI, userID int64, chatID int64, mess
 		return
 	}
 
-	var chatDiceConfig model.ChatDiceConfig
-	result := db.Where("enable = ? AND chat_id = ?", 1, chatID).First(&chatDiceConfig)
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+	_, err = model.GetByEnableAndChatId(db, 1, chatID)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		registrationMsg := tgbotapi.NewMessage(chatID, "功能未开启！")
 		registrationMsg.ReplyToMessageID = messageID
 		_, err := bot.Send(registrationMsg)
 		if err != nil {
-			log.Println("功能未开启提示消息错误:", err)
+			log.Println("功能未开启提示消息异常:", err)
 		}
 		return
-	} else if result.Error != nil {
-		log.Println("下注命令错误", result.Error)
+	} else if err != nil {
+		log.Println("下注命令异常", err.Error())
 		return
 	}
 	// 获取当前进行的期号
@@ -141,7 +140,7 @@ func handleBettingCommand(bot *tgbotapi.BotAPI, userID int64, chatID int64, mess
 		_, err = bot.Send(replyMsg)
 		return
 	} else if issueNumberResult.Err() != nil {
-		log.Println("获取值时发生错误:", issueNumberResult.Err())
+		log.Println("获取值时发生异常:", issueNumberResult.Err())
 		return
 	}
 
@@ -151,7 +150,7 @@ func handleBettingCommand(bot *tgbotapi.BotAPI, userID int64, chatID int64, mess
 	err = storeBetRecord(bot, userID, chatID, issueNumber, messageID, betType, betAmount)
 	if err != nil {
 		// 回复余额不足信息等
-		log.Println("存储下注记录错误:", err)
+		log.Println("存储下注记录异常:", err)
 		return
 	}
 
@@ -161,7 +160,7 @@ func handleBettingCommand(bot *tgbotapi.BotAPI, userID int64, chatID int64, mess
 
 	_, err = bot.Send(replyMsg)
 	if err != nil {
-		log.Println("发送消息错误:", err)
+		log.Println("发送消息异常:", err)
 	}
 }
 
@@ -181,7 +180,7 @@ func storeBetRecord(bot *tgbotapi.BotAPI, userID int64, chatID int64, issueNumbe
 		registrationMsg.ReplyToMessageID = messageID
 		_, err := bot.Send(registrationMsg)
 		if err != nil {
-			log.Println("发送注册提示消息错误:", err)
+			log.Println("发送注册提示消息异常:", err)
 			return err
 		}
 		return result.Error
@@ -194,7 +193,7 @@ func storeBetRecord(bot *tgbotapi.BotAPI, userID int64, chatID int64, issueNumbe
 		balanceInsufficientMsg.ReplyToMessageID = messageID
 		_, err := bot.Send(balanceInsufficientMsg)
 		if err != nil {
-			log.Println("您的余额不足提示错误:", err)
+			log.Println("您的余额不足提示异常:", err)
 			return err
 		} else {
 			return errors.New("余额不足")
@@ -205,7 +204,7 @@ func storeBetRecord(bot *tgbotapi.BotAPI, userID int64, chatID int64, issueNumbe
 	user.Balance -= betAmount
 	result = db.Save(&user)
 	if result.Error != nil {
-		log.Println("扣除用户余额错误:", result.Error)
+		log.Println("扣除用户余额异常:", result.Error)
 		return result.Error
 	}
 	currentTime := time.Now().Format("2006-01-02 15:04:05")
@@ -224,7 +223,7 @@ func storeBetRecord(bot *tgbotapi.BotAPI, userID int64, chatID int64, issueNumbe
 
 	result = db.Create(&betRecord)
 	if result.Error != nil {
-		log.Println("保存下注记录错误:", result.Error)
+		log.Println("保存下注记录异常:", result.Error)
 		// 如果保存下注记录失败，需要返还用户余额
 		user.Balance += betAmount
 		db.Save(&user)
@@ -280,14 +279,14 @@ func handleRegisterCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember,
 		// 没有找到记录
 		err := registerUser(chatMember.User.ID, chatMember.User.UserName, chatID)
 		if err != nil {
-			log.Println("用户注册错误:", err)
+			log.Println("用户注册异常:", err)
 		} else {
 			msgConfig := tgbotapi.NewMessage(chatID, "注册成功！奖励1000积分！")
 			msgConfig.ReplyToMessageID = messageID
 			sendMessage(bot, &msgConfig)
 		}
 	} else if result.Error != nil {
-		log.Println("查询错误:", result.Error)
+		log.Println("查询异常:", result.Error)
 	} else {
 		msgConfig := tgbotapi.NewMessage(chatID, "请勿重复注册！")
 		msgConfig.ReplyToMessageID = messageID
@@ -311,12 +310,12 @@ func handleSignInCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, c
 		sendMessage(bot, &msgConfig)
 		return
 	} else if result.Error != nil {
-		log.Println("查询错误:", result.Error)
+		log.Println("查询异常:", result.Error)
 	} else {
 		if user.SignInTime != "" {
 			signInTime, err := time.Parse("2006-01-02 15:04:05", user.SignInTime)
 			if err != nil {
-				log.Println("时间解析错误:", err)
+				log.Println("时间解析异常:", err)
 				return
 			}
 			// 获取当前时间
@@ -352,11 +351,11 @@ func handleMyCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatI
 			deleteMsg := tgbotapi.NewDeleteMessage(chatID, messageID)
 			_, err := bot.Request(deleteMsg)
 			if err != nil {
-				log.Println("删除消息错误:", err)
+				log.Println("删除消息异常:", err)
 			}
 		}(sentMsg.MessageID)
 	} else if result.Error != nil {
-		log.Println("查询错误:", result.Error)
+		log.Println("查询异常:", result.Error)
 	} else {
 		msgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("%s 您的积分余额为%d", chatMember.User.FirstName, user.Balance))
 		msgConfig.ReplyToMessageID = messageID
@@ -367,7 +366,7 @@ func handleMyCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatI
 			deleteMsg := tgbotapi.NewDeleteMessage(chatID, messageID)
 			_, err := bot.Request(deleteMsg)
 			if err != nil {
-				log.Println("删除消息错误:", err)
+				log.Println("删除消息异常:", err)
 			}
 		}(sentMsg.MessageID)
 	}
@@ -387,7 +386,7 @@ func handlePoorCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, cha
 		msgConfig.ReplyToMessageID = messageID
 		sendMessage(bot, &msgConfig)
 	} else if result.Error != nil {
-		log.Println("查询错误:", result.Error)
+		log.Println("查询异常:", result.Error)
 	} else {
 		//查询下注记录
 
@@ -412,7 +411,7 @@ func handlePoorCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, cha
 			sendMessage(bot, &msgConfig)
 			return
 		} else if err != nil {
-			log.Println("查询下注记录错误", result.Error)
+			log.Println("查询下注记录异常", result.Error)
 			return
 		} else {
 			msgConfig := tgbotapi.NewMessage(chatID, "您有未开奖的下注记录,开奖结算后再领取吧!")
@@ -470,7 +469,7 @@ func handleStopCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 		sendMessage(bot, &msgConfig)
 		return
 	} else if chatDiceConfigResult.Error != nil {
-		log.Println("开奖配置初始化错误", chatDiceConfigResult.Error)
+		log.Println("开奖配置初始化异常", chatDiceConfigResult.Error)
 		return
 	} else {
 		chatDiceConfig.Enable = 0
@@ -501,7 +500,7 @@ func handleStartCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 		}
 		db.Create(&chatDiceConfig)
 	} else if chatDiceConfigResult.Error != nil {
-		log.Println("开奖配置初始化错误", chatDiceConfigResult.Error)
+		log.Println("开奖配置初始化异常", chatDiceConfigResult.Error)
 		return
 	} else {
 		chatDiceConfig.Enable = 1
@@ -527,11 +526,11 @@ func handleStartCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 		// 存储当前期号和对话ID
 		err := redisDB.Set(redisDB.Context(), redisKey, issueNumber, 0).Err()
 		if err != nil {
-			log.Println("存储新期号和对话ID错误:", err)
+			log.Println("存储新期号和对话ID异常:", err)
 			return
 		}
 	} else if issueNumberResult.Err() != nil {
-		log.Println("获取值时发生错误:", issueNumberResult.Err())
+		log.Println("获取值时发生异常:", issueNumberResult.Err())
 		return
 	} else {
 		result, _ := issueNumberResult.Result()
@@ -566,7 +565,7 @@ func handleHelpCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 		deleteMsg := tgbotapi.NewDeleteMessage(chatID, messageID)
 		_, err := bot.Request(deleteMsg)
 		if err != nil {
-			log.Println("删除消息错误:", err)
+			log.Println("删除消息异常:", err)
 		}
 	}(sentMsg.MessageID)
 }
@@ -588,7 +587,7 @@ func handleMyHistoryCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember
 		sendMessage(bot, &msgConfig)
 		return
 	} else if err != nil {
-		log.Println("查询下注记录错误", err)
+		log.Println("查询下注记录异常", err)
 		return
 	} else {
 		msgText := "您的下注记录如下:\n"
@@ -623,7 +622,7 @@ func handleMyHistoryCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember
 			deleteMsg := tgbotapi.NewDeleteMessage(chatID, messageID)
 			_, err := bot.Request(deleteMsg)
 			if err != nil {
-				log.Println("删除消息错误:", err)
+				log.Println("删除消息异常:", err)
 			}
 		}(sentMsg.MessageID)
 
@@ -636,7 +635,7 @@ func handleMyHistoryCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember
 func sendMessage(bot *tgbotapi.BotAPI, msgConfig *tgbotapi.MessageConfig) (tgbotapi.Message, error) {
 	sentMsg, err := bot.Send(msgConfig)
 	if err != nil {
-		log.Println("发送消息错误:", err)
+		log.Println("发送消息异常:", err)
 		return sentMsg, err
 	}
 	return sentMsg, nil
@@ -677,21 +676,30 @@ func StartDice(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) {
 
 	stopFlags[chatID] = make(chan struct{})
 	go func(stopCh <-chan struct{}) {
-		var chatDiceConfig model.ChatDiceConfig
-		db.Where("chat_id = ?", chatID).First(&chatDiceConfig)
-		ticker := time.NewTicker(time.Duration(chatDiceConfig.LotteryDrawCycle) * time.Minute)
-		defer ticker.Stop()
 
-		for {
-			select {
-			case <-ticker.C:
-				nextIssueNumber := handleDiceRoll(bot, chatID, issueNumber)
-				issueNumber = nextIssueNumber
-			case <-stopCh:
-				log.Printf("已关闭任务：%v", chatID)
-				return
+		chatDiceConfig, err := model.GetByChatId(db, chatID)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Printf("聊天ID %v 未找到配置", chatID)
+			return
+		} else if err != nil {
+			log.Printf("聊天ID %v 查找配置异常 %s", chatID, err.Error())
+			return
+		} else {
+			ticker := time.NewTicker(time.Duration(chatDiceConfig.LotteryDrawCycle) * time.Minute)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-ticker.C:
+					nextIssueNumber := handleDiceRoll(bot, chatID, issueNumber)
+					issueNumber = nextIssueNumber
+				case <-stopCh:
+					log.Printf("已关闭任务：%v", chatID)
+					return
+				}
 			}
 		}
+
 	}(stopFlags[chatID])
 }
 
@@ -702,7 +710,7 @@ func handleDiceRoll(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) (nex
 	// 删除当前期号和对话ID
 	err := redisDB.Del(redisDB.Context(), redisKey).Err()
 	if err != nil {
-		log.Println("删除当前期号和对话ID错误:", err)
+		log.Println("删除当前期号和对话ID异常:", err)
 		return
 	}
 
@@ -741,7 +749,7 @@ func handleDiceRoll(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) (nex
 	// 设置新的期号和对话ID
 	err = redisDB.Set(redisDB.Context(), redisKey, nextIssueNumber, 0).Err()
 	if err != nil {
-		log.Println("存储新期号和对话ID错误:", err)
+		log.Println("存储新期号和对话ID异常:", err)
 	}
 
 	// 遍历下注记录，计算竞猜结果
@@ -749,7 +757,7 @@ func handleDiceRoll(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) (nex
 		// 获取所有参与竞猜的用户下注记录
 		betRecords, err := model.GetBetRecordsByChatIDAndIssue(db, chatID, issueNumber)
 		if err != nil {
-			log.Println("获取用户下注记录错误:", err)
+			log.Println("获取用户下注记录异常:", err)
 			return
 		}
 		// 获取当前期数开奖结果
@@ -766,7 +774,7 @@ func handleDiceRoll(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) (nex
 }
 
 // updateBalance 更新用户余额
-func updateBalance(betRecord model.BetRecord, lotteryRecord *model.LotteryRecord) {
+func updateBalance(betRecord *model.BetRecord, lotteryRecord *model.LotteryRecord) {
 
 	// 获取用户对应的互斥锁
 	userLock := getUserLock(betRecord.TgUserID)
@@ -778,7 +786,7 @@ func updateBalance(betRecord model.BetRecord, lotteryRecord *model.LotteryRecord
 	var user model.TgUser
 	result := tx.Where("tg_user_id = ? and chat_id = ?", betRecord.TgUserID, lotteryRecord.ChatID).First(&user)
 	if result.Error != nil {
-		log.Println("获取用户信息错误:", result.Error)
+		log.Println("获取用户信息异常:", result.Error)
 		return
 	}
 
@@ -798,7 +806,7 @@ func updateBalance(betRecord model.BetRecord, lotteryRecord *model.LotteryRecord
 
 	result = tx.Save(&user)
 	if result.Error != nil {
-		log.Println("更新用户余额错误:", result.Error)
+		log.Println("更新用户余额异常:", result.Error)
 		tx.Rollback()
 		return
 	}
@@ -808,7 +816,7 @@ func updateBalance(betRecord model.BetRecord, lotteryRecord *model.LotteryRecord
 	betRecord.UpdateTime = time.Now().Format("2006-01-02 15:04:05")
 	result = tx.Save(&betRecord)
 	if result.Error != nil {
-		log.Println("更新下注记录错误:", result.Error)
+		log.Println("更新下注记录异常:", result.Error)
 		tx.Rollback()
 		return
 	}
@@ -866,7 +874,7 @@ func determineResult(count int) (string, string) {
 func formatMessage(valueA int, valueB int, valueC int, count int, singleOrDouble, bigOrSmall string, triplet int, issueNumber string) string {
 	tripletStr := ""
 	if triplet == 1 {
-		tripletStr = "【豹子】\n"
+		tripletStr = "【豹子】"
 	}
 	return fmt.Sprintf(""+
 		"点数: %d %d %d %s\n"+
@@ -899,6 +907,6 @@ func insertLotteryRecord(chatID int64, issueNumber string, valueA, valueB, value
 
 	result := db.Create(&record)
 	if result.Error != nil {
-		log.Println("插入开奖记录错误:", result.Error)
+		log.Println("插入开奖记录异常:", result.Error)
 	}
 }

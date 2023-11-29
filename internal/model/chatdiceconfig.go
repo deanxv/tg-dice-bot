@@ -19,3 +19,21 @@ func ListByEnable(db *gorm.DB, enable int) ([]*ChatDiceConfig, error) {
 
 	return records, nil
 }
+
+func GetByEnableAndChatId(db *gorm.DB, enable int, chatID int64) (*ChatDiceConfig, error) {
+	var chatDiceConfig *ChatDiceConfig
+	result := db.Where("enable = ? AND chat_id = ?", enable, chatID).First(&chatDiceConfig)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return chatDiceConfig, nil
+}
+
+func GetByChatId(db *gorm.DB, chatID int64) (*ChatDiceConfig, error) {
+	var chatDiceConfig *ChatDiceConfig
+	result := db.Where("chat_id = ?", chatID).First(&chatDiceConfig)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return chatDiceConfig, nil
+}

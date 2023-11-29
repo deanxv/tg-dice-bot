@@ -16,8 +16,8 @@ type BetRecord struct {
 }
 
 // GetBetRecordsByChatIDAndIssue 根据对话ID和期号获取用户下注记录
-func GetBetRecordsByChatIDAndIssue(db *gorm.DB, chatID int64, issueNumber string) ([]BetRecord, error) {
-	var betRecords []BetRecord
+func GetBetRecordsByChatIDAndIssue(db *gorm.DB, chatID int64, issueNumber string) ([]*BetRecord, error) {
+	var betRecords []*BetRecord
 	result := db.Where("chat_id = ? AND issue_number = ?", chatID, issueNumber).Find(&betRecords)
 	if result.Error != nil {
 		return nil, result.Error
@@ -26,8 +26,8 @@ func GetBetRecordsByChatIDAndIssue(db *gorm.DB, chatID int64, issueNumber string
 }
 
 // ListBySettleStatus
-func ListBySettleStatus(db *gorm.DB, betRecord *BetRecord) ([]BetRecord, error) {
-	var betRecords []BetRecord
+func ListBySettleStatus(db *gorm.DB, betRecord *BetRecord) ([]*BetRecord, error) {
+	var betRecords []*BetRecord
 	result := db.Where("tg_user_id = ? AND chat_id = ? AND settle_status = ?", betRecord.TgUserID, betRecord.ChatID, 0).Find(&betRecords)
 	if result.Error != nil {
 		return nil, result.Error
@@ -35,8 +35,8 @@ func ListBySettleStatus(db *gorm.DB, betRecord *BetRecord) ([]BetRecord, error) 
 	return betRecords, nil
 }
 
-func ListByChatAndUser(db *gorm.DB, betRecord *BetRecord) ([]BetRecord, error) {
-	var betRecords []BetRecord
+func ListByChatAndUser(db *gorm.DB, betRecord *BetRecord) ([]*BetRecord, error) {
+	var betRecords []*BetRecord
 	result := db.Where("tg_user_id = ? AND chat_id = ?", betRecord.TgUserID, betRecord.ChatID).Limit(10).Order("issue_number desc").Find(&betRecords)
 	if result.Error != nil {
 		return nil, result.Error
