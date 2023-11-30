@@ -17,7 +17,7 @@ RUN apk update \
     && apk add --no-cache ca-certificates tzdata \
     && update-ca-certificates 2>/dev/null || true
 
-COPY --from=builder /build/tg-dice-bot /
+COPY --from=builder /build/tg-dice-bot /tg-dice-bot
 EXPOSE 3000
 WORKDIR /data
 ENTRYPOINT ["/tg-dice-bot"]
