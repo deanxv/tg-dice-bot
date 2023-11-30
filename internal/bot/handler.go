@@ -16,18 +16,6 @@ var (
 	stopMutex sync.Mutex
 )
 
-func init() {
-	// 加载中国的时区信息
-	loc, err := time.LoadLocation("Asia/Shanghai")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	// 设置全局默认时区为中国
-	time.Local = loc
-}
-
 // handleCallbackQuery 处理回调查询。
 func handleCallbackQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery) {
 	if callbackQuery.Data == "betting_history" {
@@ -142,7 +130,7 @@ func handleStartCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 	msgConfig.ReplyToMessageID = messageID
 	sendMessage(bot, &msgConfig)
 
-	issueNumber := time.Now().Format("20060102150405")
+	issueNumber := time.Now().Add(8 * time.Hour).Format("20060102150405")
 	lotteryDrawTipMsgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("第%s期 1分钟后开奖", issueNumber))
 	sendMessage(bot, &lotteryDrawTipMsgConfig)
 
@@ -227,7 +215,7 @@ func startDice(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) {
 
 // handleDiceRoll 处理骰子滚动过程。
 func handleDiceRoll(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) (nextIssueNumber string) {
-	currentTime := time.Now().Format("2006-01-02 15:04:05")
+	currentTime := time.Now().Add(8 * time.Hour).Format("2006-01-02 15:04:05")
 
 	diceValues := rollDice(bot, chatID, 3)
 	count := sumDiceValues(diceValues)
