@@ -280,7 +280,7 @@ func determineResult(count int) (string, string) {
 func formatMessage(valueA int, valueB int, valueC int, count int, singleOrDouble, bigOrSmall string, triplet int, issueNumber string) string {
 	tripletStr := ""
 	if triplet == 1 {
-		tripletStr = "豹子\n"
+		tripletStr = "【豹子】\n"
 	}
 	return fmt.Sprintf(""+
 		"点数: %d %d %d \n"+
