@@ -16,15 +16,16 @@ var (
 	stopMutex sync.Mutex
 )
 
-var location *time.Location
-
 func init() {
-	var err error
-	location, err = time.LoadLocation("Asia/Beijing")
+	// 加载中国的时区信息
+	loc, err := time.LoadLocation("Asia/Shanghai")
 	if err != nil {
-		log.Fatal("Error loading location:", err)
+		fmt.Println(err)
+		return
 	}
-	time.Local = location
+
+	// 设置全局默认时区为中国
+	time.Local = loc
 }
 
 // handleCallbackQuery 处理回调查询。
