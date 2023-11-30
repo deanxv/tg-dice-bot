@@ -1,23 +1,36 @@
+# 使用 Golang 镜像作为构建阶段
 FROM golang AS builder
 
+# 设置环境变量
 ENV GO111MODULE=on \
-    CGO_ENABLED=1 \
+    CGO_ENABLED=0 \
     GOOS=linux
 
+# 设置工作目录
 WORKDIR /build
-ADD go.mod go.sum ./
-RUN go mod download
-COPY . .
-RUN go build -ldflags "-extldflags '-static'" -o tg-dice-bot
 
+# 复制 go.mod 和 go.sum 文件，先下载依赖
+COPY go.mod go.sum ./
+RUN go mod download
+
+# 复制整个项目并构建可执行文件
+COPY . .
+RUN go build -o /tg-dice-bot
+
+# 使用 Alpine 镜像作为最终镜像
 FROM alpine
 
-RUN apk update \
-    && apk upgrade \
-    && apk add --no-cache ca-certificates tzdata \
-    && update-ca-certificates 2>/dev/null || true
+# 安装基本的运行时依赖
+RUN apk --no-cache add ca-certificates tzdata
 
-COPY --from=builder /build/tg-dice-bot /tg-dice-bot
-EXPOSE 3000
+# 设置工作目录
 WORKDIR /data
-ENTRYPOINT ["/tg-dice-bot"]
+
+# 从构建阶段复制可执行文件
+COPY --from=builder /tg-dice-bot .
+
+# 暴露端口
+EXPOSE 3000
+
+# 设置入口命令
+CMD ["./tg-dice-bot"]
