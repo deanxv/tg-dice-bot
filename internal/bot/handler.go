@@ -16,6 +16,17 @@ var (
 	stopMutex sync.Mutex
 )
 
+var location *time.Location
+
+func init() {
+	var err error
+	location, err = time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		log.Fatal("Error loading location:", err)
+	}
+	time.Local = location
+}
+
 // handleCallbackQuery 处理回调查询。
 func handleCallbackQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery) {
 	if callbackQuery.Data == "betting_history" {
