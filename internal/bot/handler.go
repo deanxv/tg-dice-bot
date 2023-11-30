@@ -141,15 +141,28 @@ func handleStartCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 func handleHelpCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 	msgConfig := tgbotapi.NewMessage(chatID, "/start 开启机器人\n/stop 关闭机器人\n开奖周期: 1分钟")
 	msgConfig.ReplyToMessageID = messageID
-	sendMessage(bot, &msgConfig)
+	sentMsg, err := sendMessage(bot, &msgConfig)
+	if err != nil {
+		return
+	}
+	go func(messageID int) {
+		time.Sleep(1 * time.Minute)
+		deleteMsg := tgbotapi.NewDeleteMessage(chatID, messageID)
+		_, err := bot.Request(deleteMsg)
+		if err != nil {
+			log.Println("删除消息错误:", err)
+		}
+	}(sentMsg.MessageID)
 }
 
 // sendMessage 使用提供的消息配置发送消息。
-func sendMessage(bot *tgbotapi.BotAPI, msgConfig *tgbotapi.MessageConfig) {
-	_, err := bot.Send(msgConfig)
+func sendMessage(bot *tgbotapi.BotAPI, msgConfig *tgbotapi.MessageConfig) (tgbotapi.Message, error) {
+	sentMsg, err := bot.Send(msgConfig)
 	if err != nil {
 		log.Println("发送消息错误:", err)
+		return sentMsg, err
 	}
+	return sentMsg, nil
 }
 
 // getChatMember 获取有关聊天成员的信息。
