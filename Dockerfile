@@ -8,7 +8,7 @@ WORKDIR /build
 ADD go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN go build -ldflags "-s -w -X -extldflags '-static'" -o dice-bot
+RUN go build -ldflags "-extldflags '-static'" -o dice-bot
 
 FROM alpine
 
