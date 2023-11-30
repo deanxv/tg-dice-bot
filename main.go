@@ -1,7 +1,7 @@
 package main
 
 import (
-	"tgbot/internal/bot"
+	"tg-dice-bot/internal/bot"
 )
 
 func main() {

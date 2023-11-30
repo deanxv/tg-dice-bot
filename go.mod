@@ -1,4 +1,4 @@
-module tgbot
+module tg-dice-bot
 
 go 1.20
 

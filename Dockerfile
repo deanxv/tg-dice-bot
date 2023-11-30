@@ -8,7 +8,7 @@ WORKDIR /build
 ADD go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN go build -ldflags "-extldflags '-static'" -o dice-bot
+RUN go build -ldflags "-extldflags '-static'" -o tg-dice-bot
 
 FROM alpine
 
@@ -17,7 +17,7 @@ RUN apk update \
     && apk add --no-cache ca-certificates tzdata \
     && update-ca-certificates 2>/dev/null || true
 
-COPY --from=builder /build/dice-bot /
+COPY --from=builder /build/tg-dice-bot /
 EXPOSE 3000
 WORKDIR /data
-ENTRYPOINT ["/dice-bot"]
+ENTRYPOINT ["/tg-dice-bot"]

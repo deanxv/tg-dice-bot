@@ -8,7 +8,7 @@ import (
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"tgbot/internal/model"
+	"tg-dice-bot/internal/model"
 )
 
 var (

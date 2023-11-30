@@ -5,8 +5,8 @@ import (
 	"gorm.io/gorm"
 	"log"
 	"os"
-	"tgbot/internal/database"
-	"tgbot/internal/model"
+	"tg-dice-bot/internal/database"
+	"tg-dice-bot/internal/model"
 )
 
 const (
