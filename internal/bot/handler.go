@@ -1,14 +1,22 @@
 package bot
 
 import (
+	"errors"
 	"fmt"
+	"github.com/go-redis/redis/v8"
+	"gorm.io/gorm"
 	"log"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"tg-dice-bot/internal/model"
+)
+
+const (
+	RedisCurrentIssueKey = "current_issue:%d"
 )
 
 var (
@@ -18,6 +26,7 @@ var (
 
 // handleCallbackQuery 处理回调查询。
 func handleCallbackQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery) {
+
 	if callbackQuery.Data == "betting_history" {
 		handleBettingHistoryQuery(bot, callbackQuery)
 	}
@@ -30,7 +39,6 @@ func handleBettingHistoryQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Cal
 		log.Println("获取开奖历史错误:", err)
 		return
 	}
-
 	msgText := generateBettingHistoryMessage(records)
 	msg := tgbotapi.NewMessage(callbackQuery.Message.Chat.ID, msgText)
 
@@ -80,9 +88,133 @@ func handleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 		if message.Chat.IsGroup() {
 			handleGroupCommand(bot, user.UserName, chatMember, message.Command(), chatID, messageID)
 		} else {
-			handlePrivateCommand(bot, chatID, messageID, message.Command())
+			handlePrivateCommand(bot, chatMember, chatID, messageID, message.Command())
+		}
+	} else if message.Text != "" {
+		handleBettingCommand(bot, user.ID, chatID, messageID, message.Text)
+	}
+}
+
+// handleBettingCommand 处理下注命令
+func handleBettingCommand(bot *tgbotapi.BotAPI, userID int64, chatID int64, messageID int, text string) {
+	var chatDiceConfig model.ChatDiceConfig
+	result := db.Where("enable = ? AND chat_id = ?", 1, chatID).First(&chatDiceConfig)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		registrationMsg := tgbotapi.NewMessage(chatID, "功能未开启！")
+		registrationMsg.ReplyToMessageID = messageID
+		_, err := bot.Send(registrationMsg)
+		if err != nil {
+			log.Println("功能未开启提示消息错误:", err)
+		}
+		return
+	}
+
+	// 解析下注命令，示例命令格式：#单 20
+	// 这里需要根据实际需求进行合适的解析，示例中只是简单示范
+
+	parts := strings.Fields(text)
+	if len(parts) != 2 || !strings.HasPrefix(parts[0], "#") {
+		return
+	}
+
+	// 获取下注类型和下注积分
+	betType := parts[0][1:]
+	betAmount, err := strconv.Atoi(parts[1])
+	if err != nil || betAmount <= 0 {
+		return
+	}
+
+	// 获取当前进行的期号
+	redisKey := fmt.Sprintf(RedisCurrentIssueKey, chatID)
+	issueNumberResult := redisDB.Get(redisDB.Context(), redisKey)
+	if errors.Is(issueNumberResult.Err(), redis.Nil) || issueNumberResult == nil {
+		log.Printf("键 %s 不存在", redisKey)
+		replyMsg := tgbotapi.NewMessage(chatID, "当前暂无开奖活动!")
+		replyMsg.ReplyToMessageID = messageID
+		_, err = bot.Send(replyMsg)
+		return
+	} else if issueNumberResult.Err() != nil {
+		log.Println("获取值时发生错误:", issueNumberResult.Err())
+		return
+	}
+
+	issueNumber, _ := issueNumberResult.Result()
+
+	// 存储下注记录到数据库，并扣除用户余额
+	err = storeBetRecord(bot, userID, chatID, issueNumber, messageID, betType, betAmount)
+	if err != nil {
+		// 回复余额不足信息等
+		log.Println("存储下注记录错误:", err)
+		return
+	}
+
+	// 回复下注成功信息
+	replyMsg := tgbotapi.NewMessage(chatID, "下注成功!")
+	replyMsg.ReplyToMessageID = messageID
+	_, err = bot.Send(replyMsg)
+	if err != nil {
+		log.Println("发送消息错误:", err)
+	}
+}
+
+// storeBetRecord 函数中扣除用户余额并保存下注记录
+func storeBetRecord(bot *tgbotapi.BotAPI, userID int64, chatID int64, issueNumber string, messageID int, betType string, betAmount int) error {
+	// 获取用户信息
+	var user model.TgUser
+	result := db.Where("user_id = ? AND chat_id = ?", userID, chatID).First(&user)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		// 用户不存在，发送注册提示
+		registrationMsg := tgbotapi.NewMessage(chatID, "你还未注册，使用 /register 进行注册。")
+		registrationMsg.ReplyToMessageID = messageID
+		_, err := bot.Send(registrationMsg)
+		if err != nil {
+			log.Println("发送注册提示消息错误:", err)
+			return err
 		}
 	}
+
+	// 检查用户余额是否足够
+	if user.Balance < betAmount {
+		// 用户不存在，发送注册提示
+		balanceInsufficientMsg := tgbotapi.NewMessage(chatID, "你的余额不足！")
+		balanceInsufficientMsg.ReplyToMessageID = messageID
+		_, err := bot.Send(balanceInsufficientMsg)
+		if err != nil {
+			log.Println("你的余额不足提示错误:", err)
+			return err
+		} else {
+			return errors.New("余额不足")
+		}
+	}
+
+	// 扣除用户余额
+	user.Balance -= betAmount
+	result = db.Save(&user)
+	if result.Error != nil {
+		log.Println("扣除用户余额错误:", result.Error)
+		return result.Error
+	}
+
+	// 保存下注记录
+	betRecord := model.BetRecord{
+		UserID:      userID,
+		ChatID:      chatID,
+		BetType:     betType,
+		BetAmount:   betAmount,
+		IssueNumber: issueNumber,
+		Timestamp:   time.Now().Format("2006-01-02 15:04:05"),
+	}
+
+	result = db.Create(&betRecord)
+	if result.Error != nil {
+		log.Println("保存下注记录错误:", result.Error)
+		// 如果保存下注记录失败，需要返还用户余额
+		user.Balance += betAmount
+		db.Save(&user)
+		return result.Error
+	}
+
+	return nil
 }
 
 // handleGroupCommand 处理群聊中的命令。
@@ -95,6 +227,8 @@ func handleGroupCommand(bot *tgbotapi.BotAPI, username string, chatMember tgbota
 			handleStartCommand(bot, chatID, messageID)
 		case "help":
 			handleHelpCommand(bot, chatID, messageID)
+		case "register":
+			handleRegisterCommand(bot, chatMember, chatID, messageID)
 		}
 	} else {
 		log.Printf("%s 不是管理员\n", username)
@@ -104,8 +238,42 @@ func handleGroupCommand(bot *tgbotapi.BotAPI, username string, chatMember tgbota
 	}
 }
 
+func handleRegisterCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatID int64, messageID int) {
+	var user model.TgUser
+	result := db.Where("user_id = ? AND chat_id = ?", chatMember.User.ID, chatID).First(&user)
+	if result != nil {
+		msgConfig := tgbotapi.NewMessage(chatID, "请勿重复注册！")
+		msgConfig.ReplyToMessageID = messageID
+		sendMessage(bot, &msgConfig)
+		return
+	}
+
+	err := registerUser(chatMember.User.ID, chatMember.User.UserName, chatID)
+	if err != nil {
+		log.Println("用户注册错误:", err)
+	} else {
+		msgConfig := tgbotapi.NewMessage(chatID, "注册成功！奖励1000积分！")
+		msgConfig.ReplyToMessageID = messageID
+		sendMessage(bot, &msgConfig)
+	}
+}
+
+// registerUser 函数用于用户注册时插入初始数据到数据库
+func registerUser(userID int64, userName string, chatID int64) error {
+	initialBalance := 1000
+	newUser := model.TgUser{
+		UserID:   userID,
+		ChatID:   chatID,
+		Username: userName,
+		Balance:  initialBalance,
+	}
+
+	result := db.Create(&newUser)
+	return result.Error
+}
+
 // handlePrivateCommand 处理私聊中的命令。
-func handlePrivateCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int, command string) {
+func handlePrivateCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatID int64, messageID int, command string) {
 	switch command {
 	case "stop":
 		handleStopCommand(bot, chatID, messageID)
@@ -113,11 +281,34 @@ func handlePrivateCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int, com
 		handleStartCommand(bot, chatID, messageID)
 	case "help":
 		handleHelpCommand(bot, chatID, messageID)
+	case "register":
+		handleRegisterCommand(bot, chatMember, chatID, messageID)
 	}
 }
 
 // handleStopCommand 处理 "stop" 命令。
 func handleStopCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
+
+	var chatDiceConfig model.ChatDiceConfig
+	// 更新开奖配置
+	chatDiceConfigResult := db.First(&chatDiceConfig, "chat_id = ?", chatID)
+	if errors.Is(chatDiceConfigResult.Error, gorm.ErrRecordNotFound) {
+		msgConfig := tgbotapi.NewMessage(chatID, "开启后才可关闭！")
+		msgConfig.ReplyToMessageID = messageID
+		sendMessage(bot, &msgConfig)
+		return
+	} else if chatDiceConfigResult.Error != nil {
+		log.Println("开奖配置初始化错误", chatDiceConfigResult.Error)
+		return
+	} else {
+		chatDiceConfig.Enable = 0
+		result := db.Model(&model.ChatDiceConfig{}).Where("chat_id = ?", chatID).Update("enable", 0)
+		if result.Error != nil {
+			log.Println("开奖配置初始化失败: " + result.Error.Error())
+			return
+		}
+	}
+
 	msgConfig := tgbotapi.NewMessage(chatID, "已关闭")
 	msgConfig.ReplyToMessageID = messageID
 	sendMessage(bot, &msgConfig)
@@ -126,14 +317,55 @@ func handleStopCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 
 // handleStartCommand 处理 "start" 命令。
 func handleStartCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
+	var chatDiceConfig model.ChatDiceConfig
+	// 更新开奖配置
+	chatDiceConfigResult := db.First(&chatDiceConfig, "chat_id = ?", chatID)
+	if errors.Is(chatDiceConfigResult.Error, gorm.ErrRecordNotFound) {
+		// 开奖配置不存在 则保存
+		chatDiceConfig := model.ChatDiceConfig{
+			ChatID:           chatID,
+			LotteryDrawCycle: 1, // 开奖周期(分钟)
+			Enable:           1, // 开启状态
+		}
+		db.Create(&chatDiceConfig)
+	} else if chatDiceConfigResult.Error != nil {
+		log.Println("开奖配置初始化错误", chatDiceConfigResult.Error)
+		return
+	} else {
+		chatDiceConfig.Enable = 1
+		result := db.Model(&model.ChatDiceConfig{}).Where("chat_id = ?", chatID).Update("enable", 1)
+		if result.Error != nil {
+			log.Println("开奖配置初始化失败: " + result.Error.Error())
+			return
+		}
+	}
+
 	msgConfig := tgbotapi.NewMessage(chatID, "已开启")
 	msgConfig.ReplyToMessageID = messageID
 	sendMessage(bot, &msgConfig)
 
 	issueNumber := time.Now().Format("20060102150405")
-	lotteryDrawTipMsgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("第%s期 1分钟后开奖", issueNumber))
-	sendMessage(bot, &lotteryDrawTipMsgConfig)
 
+	// 查找上个未开奖的期号
+	redisKey := fmt.Sprintf(RedisCurrentIssueKey, chatID)
+	issueNumberResult := redisDB.Get(redisDB.Context(), redisKey)
+	if issueNumberResult.Err() == nil {
+		result, _ := issueNumberResult.Result()
+		issueNumber = result
+		lotteryDrawTipMsgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("第%s期 1分钟后开奖", issueNumber))
+		sendMessage(bot, &lotteryDrawTipMsgConfig)
+	} else {
+		lotteryDrawTipMsgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("第%s期 1分钟后开奖", issueNumber))
+		sendMessage(bot, &lotteryDrawTipMsgConfig)
+		// 存储当前期号和对话ID
+		err := redisDB.Set(redisDB.Context(), redisKey, issueNumber, 0).Err()
+		if err != nil {
+			log.Println("存储新期号和对话ID错误:", err)
+			return
+		}
+	}
+
+	//redisKey := fmt.Sprintf(RedisCurrentIssueKey, chatID)
 	go startDice(bot, chatID, issueNumber)
 }
 
@@ -197,8 +429,18 @@ func startDice(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) {
 
 	stopFlags[chatID] = make(chan struct{})
 	go func(stopCh <-chan struct{}) {
-		ticker := time.NewTicker(60 * time.Second)
+		var chatDiceConfig model.ChatDiceConfig
+		db.Where("chat_id = ?", chatID).First(&chatDiceConfig)
+		ticker := time.NewTicker(time.Duration(chatDiceConfig.LotteryDrawCycle) * time.Minute)
 		defer ticker.Stop()
+
+		// 查找上个未开奖的期号
+		redisKey := fmt.Sprintf(RedisCurrentIssueKey, chatID)
+		issueNumberResult := redisDB.Get(redisDB.Context(), redisKey)
+		if issueNumberResult == nil {
+			result, _ := issueNumberResult.Result()
+			issueNumber = result
+		}
 
 		for {
 			select {
@@ -215,6 +457,15 @@ func startDice(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) {
 
 // handleDiceRoll 处理骰子滚动过程。
 func handleDiceRoll(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) (nextIssueNumber string) {
+
+	redisKey := fmt.Sprintf(RedisCurrentIssueKey, chatID)
+	// 删除当前期号和对话ID
+	err := redisDB.Del(redisDB.Context(), redisKey).Err()
+	if err != nil {
+		log.Println("删除当前期号和对话ID错误:", err)
+		return
+	}
+
 	currentTime := time.Now().Format("2006-01-02 15:04:05")
 
 	diceValues := rollDice(bot, chatID, 3)
@@ -240,11 +491,58 @@ func handleDiceRoll(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) (nex
 	msg.ReplyMarkup = keyboard
 	sendMessage(bot, &msg)
 
-	issueNumberInt, _ := strconv.Atoi(issueNumber)
-	nextIssueNumber = strconv.Itoa(issueNumberInt + 60)
+	//issueNumberInt, _ := strconv.Atoi(issueNumber)
+	nextIssueNumber = time.Now().Format("20060102150405")
 	lotteryDrawTipMsgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("第%s期 1分钟后开奖", nextIssueNumber))
 	sendMessage(bot, &lotteryDrawTipMsgConfig)
+
+	// 设置新的期号和对话ID
+	err = redisDB.Set(redisDB.Context(), redisKey, nextIssueNumber, 0).Err()
+	if err != nil {
+		log.Println("存储新期号和对话ID错误:", err)
+	}
+
+	// 遍历下注记录，计算竞猜结果
+	go func() {
+		// 获取所有参与竞猜的用户下注记录
+		betRecords, err := model.GetBetRecordsByChatIDAndIssue(db, chatID, issueNumber)
+		if err != nil {
+			log.Println("获取用户下注记录错误:", err)
+			return
+		}
+		// 获取当前期数开奖结果
+		var lotteryRecord model.LotteryRecord
+		db.Where("issue_number = ? AND chat_id = ?", issueNumber, chatID).First(&lotteryRecord)
+
+		for _, betRecord := range betRecords {
+			// 更新用户余额
+			updateBalance(betRecord, &lotteryRecord)
+		}
+	}()
+
 	return nextIssueNumber
+}
+
+// updateBalance 更新用户余额
+func updateBalance(betRecord model.BetRecord, lotteryRecord *model.LotteryRecord) {
+	var user model.TgUser
+	result := db.Where("user_id = ?", betRecord.UserID).First(&user)
+	if result.Error != nil {
+		log.Println("获取用户信息错误:", result.Error)
+		return
+	}
+
+	if betRecord.BetType == lotteryRecord.SingleDouble ||
+		betRecord.BetType == lotteryRecord.BigSmall {
+		user.Balance += betRecord.BetAmount * 2
+	} else if betRecord.BetType == "豹子" {
+		user.Balance += betRecord.BetAmount * 10
+	}
+
+	result = db.Save(&user)
+	if result.Error != nil {
+		log.Println("更新用户余额错误:", result.Error)
+	}
 }
 
 // rollDice 模拟多次掷骰子。

@@ -7,6 +7,8 @@ import (
 	"os"
 	"tg-dice-bot/internal/database"
 	"tg-dice-bot/internal/model"
+
+	"github.com/go-redis/redis/v8"
 )
 
 const (
@@ -14,7 +16,8 @@ const (
 )
 
 var (
-	db *gorm.DB
+	db      *gorm.DB
+	redisDB *redis.Client
 )
 
 func StartBot() {
@@ -28,7 +31,7 @@ func StartBot() {
 
 	for update := range updates {
 		if update.Message != nil {
-			handleMessage(bot, update.Message)
+			go handleMessage(bot, update.Message)
 		} else if update.CallbackQuery != nil {
 			go handleCallbackQuery(bot, update.CallbackQuery)
 		}
@@ -46,6 +49,27 @@ func initDB() {
 	if err != nil {
 		log.Fatal("自动迁移表结构失败:", err)
 	}
+
+	err = db.AutoMigrate(&model.TgUser{})
+	if err != nil {
+		log.Fatal("自动迁移表结构失败:", err)
+	}
+
+	err = db.AutoMigrate(&model.BetRecord{})
+	if err != nil {
+		log.Fatal("自动迁移表结构失败:", err)
+	}
+
+	err = db.AutoMigrate(&model.ChatDiceConfig{})
+	if err != nil {
+		log.Fatal("自动迁移表结构失败:", err)
+	}
+
+	redisDB, err = database.InitRedisDB(os.Getenv(database.RedisDBConnectionString))
+	if err != nil {
+		log.Fatal("连接Redis数据库失败:", err)
+	}
+
 }
 func initTelegramBot() *tgbotapi.BotAPI {
 	bot, err := tgbotapi.NewBotAPI(os.Getenv(TelegramAPIToken))
