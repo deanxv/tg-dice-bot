@@ -324,14 +324,14 @@ func handleSignInCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, c
 func handleMyCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatID int64, messageID int) {
 	var user model.TgUser
 	result := db.Where("user_id = ? AND chat_id = ?", chatMember.User.ID, chatID).First(&user)
-	if result.Error != nil {
-		log.Println("查询错误:", result.Error)
-		return
-	} else if user.ID == 0 {
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		// 没有找到记录
 		msgConfig := tgbotapi.NewMessage(chatID, "请发送 /register 注册用户！")
 		msgConfig.ReplyToMessageID = messageID
 		sendMessage(bot, &msgConfig)
+		return
+	} else if result.Error != nil {
+		log.Println("查询错误:", result.Error)
 		return
 	} else {
 		msgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("%s 你的积分余额为%d", user.Username, user.Balance))
@@ -348,14 +348,14 @@ func handlePoorCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, cha
 
 	var user model.TgUser
 	result := db.Where("user_id = ? AND chat_id = ?", chatMember.User.ID, chatID).First(&user)
-	if result.Error != nil {
-		log.Println("查询错误:", result.Error)
-		return
-	} else if user.ID == 0 {
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		// 没有找到记录
 		msgConfig := tgbotapi.NewMessage(chatID, "请发送 /register 注册用户！")
 		msgConfig.ReplyToMessageID = messageID
 		sendMessage(bot, &msgConfig)
+		return
+	} else if result.Error != nil {
+		log.Println("查询错误:", result.Error)
 		return
 	} else {
 		if user.Balance > 1000 {
@@ -491,7 +491,13 @@ func handleStartCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 
 // handleHelpCommand 处理 "help" 命令。
 func handleHelpCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
-	msgConfig := tgbotapi.NewMessage(chatID, "/start 开启机器人\n/stop 关闭机器人\n开奖周期: 1分钟")
+	msgConfig := tgbotapi.NewMessage(chatID, "/help帮助\n"+
+		"/start 开启机器人\n"+
+		"/stop 关闭机器人\n"+
+		"/register 用户注册\n"+
+		"/sign 用户签到\n"+
+		"/my 查询积分\n"+
+		"默认开奖周期: 1分钟")
 	msgConfig.ReplyToMessageID = messageID
 	sentMsg, err := sendMessage(bot, &msgConfig)
 	if err != nil {
