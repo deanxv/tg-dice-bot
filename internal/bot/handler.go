@@ -159,6 +159,11 @@ func handleBettingCommand(bot *tgbotapi.BotAPI, userID int64, chatID int64, mess
 
 // storeBetRecord 函数中扣除用户余额并保存下注记录
 func storeBetRecord(bot *tgbotapi.BotAPI, userID int64, chatID int64, issueNumber string, messageID int, betType string, betAmount int) error {
+	// 获取用户对应的互斥锁
+	userLock := getUserLock(userID)
+	userLock.Lock()
+	defer userLock.Unlock()
+
 	// 获取用户信息
 	var user model.TgUser
 	result := db.Where("user_id = ? AND chat_id = ?", userID, chatID).First(&user)
@@ -229,6 +234,10 @@ func handleGroupCommand(bot *tgbotapi.BotAPI, username string, chatMember tgbota
 			handleHelpCommand(bot, chatID, messageID)
 		case "register":
 			handleRegisterCommand(bot, chatMember, chatID, messageID)
+		case "sign":
+			handleSignInCommand(bot, chatMember, chatID, messageID)
+		case "my":
+			handleMyCommand(bot, chatMember, chatID, messageID)
 		}
 	} else {
 		log.Printf("%s 不是管理员\n", username)
@@ -239,20 +248,125 @@ func handleGroupCommand(bot *tgbotapi.BotAPI, username string, chatMember tgbota
 }
 
 func handleRegisterCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatID int64, messageID int) {
+	// 获取用户对应的互斥锁
+	userLock := getUserLock(chatMember.User.ID)
+	userLock.Lock()
+	defer userLock.Unlock()
+
 	var user model.TgUser
 	result := db.Where("user_id = ? AND chat_id = ?", chatMember.User.ID, chatID).First(&user)
-	if result != nil {
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		// 没有找到记录
+		err := registerUser(chatMember.User.ID, chatMember.User.UserName, chatID)
+		if err != nil {
+			log.Println("用户注册错误:", err)
+		} else {
+			msgConfig := tgbotapi.NewMessage(chatID, "注册成功！奖励1000积分！")
+			msgConfig.ReplyToMessageID = messageID
+			sendMessage(bot, &msgConfig)
+		}
+		return
+	} else if result.Error != nil {
+		log.Println("查询错误:", result.Error)
+		return
+	} else {
 		msgConfig := tgbotapi.NewMessage(chatID, "请勿重复注册！")
 		msgConfig.ReplyToMessageID = messageID
 		sendMessage(bot, &msgConfig)
 		return
 	}
+}
 
-	err := registerUser(chatMember.User.ID, chatMember.User.UserName, chatID)
-	if err != nil {
-		log.Println("用户注册错误:", err)
+func handleSignInCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatID int64, messageID int) {
+	// 获取用户对应的互斥锁
+	userLock := getUserLock(chatMember.User.ID)
+	userLock.Lock()
+	defer userLock.Unlock()
+
+	var user model.TgUser
+	result := db.Where("user_id = ? AND chat_id = ?", chatMember.User.ID, chatID).First(&user)
+	if result.Error != nil {
+		log.Println("查询错误:", result.Error)
+		return
+	} else if user.ID == 0 {
+		// 没有找到记录
+		msgConfig := tgbotapi.NewMessage(chatID, "请发送 /register 注册用户！")
+		msgConfig.ReplyToMessageID = messageID
+		sendMessage(bot, &msgConfig)
+		return
 	} else {
-		msgConfig := tgbotapi.NewMessage(chatID, "注册成功！奖励1000积分！")
+		if user.SignInTime != "" {
+			signInTime, err := time.Parse("2006-01-02 15:04:05", user.SignInTime)
+			if err != nil {
+				fmt.Println("时间解析错误:", err)
+				return
+			}
+			// 获取当前时间
+			currentTime := time.Now()
+			currentMidnight := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), 0, 0, 0, 0, currentTime.Location())
+			if !signInTime.Before(currentMidnight) {
+				msgConfig := tgbotapi.NewMessage(chatID, "今天已签到过了哦！")
+				msgConfig.ReplyToMessageID = messageID
+				sendMessage(bot, &msgConfig)
+				return
+			}
+		}
+		user.SignInTime = time.Now().Format("2006-01-02 15:04:05")
+		user.Balance += 1000
+		result = db.Save(&user)
+		msgConfig := tgbotapi.NewMessage(chatID, "签到成功！奖励1000积分！")
+		msgConfig.ReplyToMessageID = messageID
+		sendMessage(bot, &msgConfig)
+
+	}
+}
+
+func handleMyCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatID int64, messageID int) {
+	var user model.TgUser
+	result := db.Where("user_id = ? AND chat_id = ?", chatMember.User.ID, chatID).First(&user)
+	if result.Error != nil {
+		log.Println("查询错误:", result.Error)
+		return
+	} else if user.ID == 0 {
+		// 没有找到记录
+		msgConfig := tgbotapi.NewMessage(chatID, "请发送 /register 注册用户！")
+		msgConfig.ReplyToMessageID = messageID
+		sendMessage(bot, &msgConfig)
+		return
+	} else {
+		msgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("%s 你的积分余额为%d", user.Username, user.Balance))
+		msgConfig.ReplyToMessageID = messageID
+		sendMessage(bot, &msgConfig)
+	}
+}
+
+func handlePoorCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatID int64, messageID int) {
+	// 获取用户对应的互斥锁
+	userLock := getUserLock(chatMember.User.ID)
+	userLock.Lock()
+	defer userLock.Unlock()
+
+	var user model.TgUser
+	result := db.Where("user_id = ? AND chat_id = ?", chatMember.User.ID, chatID).First(&user)
+	if result.Error != nil {
+		log.Println("查询错误:", result.Error)
+		return
+	} else if user.ID == 0 {
+		// 没有找到记录
+		msgConfig := tgbotapi.NewMessage(chatID, "请发送 /register 注册用户！")
+		msgConfig.ReplyToMessageID = messageID
+		sendMessage(bot, &msgConfig)
+		return
+	} else {
+		if user.Balance > 1000 {
+			msgConfig := tgbotapi.NewMessage(chatID, "1000积分以下才可以领取低保哦")
+			msgConfig.ReplyToMessageID = messageID
+			sendMessage(bot, &msgConfig)
+			return
+		}
+		user.Balance += 1000
+		result = db.Save(&user)
+		msgConfig := tgbotapi.NewMessage(chatID, "领取低保成功！获得1000积分！")
 		msgConfig.ReplyToMessageID = messageID
 		sendMessage(bot, &msgConfig)
 	}
@@ -283,6 +397,12 @@ func handlePrivateCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, 
 		handleHelpCommand(bot, chatID, messageID)
 	case "register":
 		handleRegisterCommand(bot, chatMember, chatID, messageID)
+	case "sign":
+		handleSignInCommand(bot, chatMember, chatID, messageID)
+	case "my":
+		handleMyCommand(bot, chatMember, chatID, messageID)
+	case "iampoor":
+		handlePoorCommand(bot, chatMember, chatID, messageID)
 	}
 }
 
@@ -525,6 +645,12 @@ func handleDiceRoll(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) (nex
 
 // updateBalance 更新用户余额
 func updateBalance(betRecord model.BetRecord, lotteryRecord *model.LotteryRecord) {
+
+	// 获取用户对应的互斥锁
+	userLock := getUserLock(betRecord.UserID)
+	userLock.Lock()
+	defer userLock.Unlock()
+
 	var user model.TgUser
 	result := db.Where("user_id = ?", betRecord.UserID).First(&user)
 	if result.Error != nil {
