@@ -231,28 +231,25 @@ func storeBetRecord(bot *tgbotapi.BotAPI, userID int64, chatID int64, issueNumbe
 
 // handleGroupCommand 处理群聊中的命令。
 func handleGroupCommand(bot *tgbotapi.BotAPI, username string, chatMember tgbotapi.ChatMember, command string, chatID int64, messageID int) {
+	switch command {
+	case "help":
+		handleHelpCommand(bot, chatID, messageID)
+	case "register":
+		handleRegisterCommand(bot, chatMember, chatID, messageID)
+	case "sign":
+		handleSignInCommand(bot, chatMember, chatID, messageID)
+	case "my":
+		handleMyCommand(bot, chatMember, chatID, messageID)
+	case "iampoor":
+		handlePoorCommand(bot, chatMember, chatID, messageID)
+	}
 	if chatMember.IsAdministrator() || chatMember.IsCreator() {
 		switch command {
 		case "stop":
 			handleStopCommand(bot, chatID, messageID)
 		case "start":
 			handleStartCommand(bot, chatID, messageID)
-		case "help":
-			handleHelpCommand(bot, chatID, messageID)
-		case "register":
-			handleRegisterCommand(bot, chatMember, chatID, messageID)
-		case "sign":
-			handleSignInCommand(bot, chatMember, chatID, messageID)
-		case "my":
-			handleMyCommand(bot, chatMember, chatID, messageID)
-		case "iampoor":
-			handlePoorCommand(bot, chatMember, chatID, messageID)
 		}
-	} else {
-		log.Printf("%s 不是管理员\n", username)
-		msgConfig := tgbotapi.NewMessage(chatID, "你不是管理员")
-		msgConfig.ReplyToMessageID = messageID
-		sendMessage(bot, &msgConfig)
 	}
 }
 
@@ -343,7 +340,7 @@ func handleMyCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatI
 		log.Println("查询错误:", result.Error)
 		return
 	} else {
-		msgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("%s 你的积分余额为%d", user.Username, user.Balance))
+		msgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("%s 你的积分余额为%d", chatMember.User.LastName, user.Balance))
 		msgConfig.ReplyToMessageID = messageID
 		sendMessage(bot, &msgConfig)
 	}
