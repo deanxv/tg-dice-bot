@@ -107,6 +107,9 @@ func handleBettingCommand(bot *tgbotapi.BotAPI, userID int64, chatID int64, mess
 			log.Println("功能未开启提示消息错误:", err)
 		}
 		return
+	} else if result.Error != nil {
+		log.Println("下注命令错误", result.Error)
+		return
 	}
 
 	// 解析下注命令，示例命令格式：#单 20
