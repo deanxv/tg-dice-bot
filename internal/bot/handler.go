@@ -233,6 +233,8 @@ func storeBetRecord(bot *tgbotapi.BotAPI, userID int64, chatID int64, issueNumbe
 func handleGroupCommand(bot *tgbotapi.BotAPI, username string, chatMember tgbotapi.ChatMember, command string, chatID int64, messageID int) {
 	if command == "start" {
 		if !chatMember.IsAdministrator() && !chatMember.IsCreator() {
+			log.Printf("chatMember.IsAdministrator():%v", chatMember.IsAdministrator())
+			log.Printf("chatMember.IsCreator():%v", chatMember.IsCreator())
 			msgConfig := tgbotapi.NewMessage(chatID, "请勿使用管理员命令")
 			msgConfig.ReplyToMessageID = messageID
 			sendMessage(bot, &msgConfig)
@@ -241,6 +243,8 @@ func handleGroupCommand(bot *tgbotapi.BotAPI, username string, chatMember tgbota
 		handleStartCommand(bot, chatID, messageID)
 	} else if command == "stop" {
 		if !chatMember.IsAdministrator() && !chatMember.IsCreator() {
+			log.Printf("chatMember.IsAdministrator():%v", chatMember.IsAdministrator())
+			log.Printf("chatMember.IsCreator():%v", chatMember.IsCreator())
 			msgConfig := tgbotapi.NewMessage(chatID, "请勿使用管理员命令")
 			msgConfig.ReplyToMessageID = messageID
 			sendMessage(bot, &msgConfig)
