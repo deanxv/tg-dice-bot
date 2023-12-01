@@ -238,6 +238,8 @@ func handleGroupCommand(bot *tgbotapi.BotAPI, username string, chatMember tgbota
 			handleSignInCommand(bot, chatMember, chatID, messageID)
 		case "my":
 			handleMyCommand(bot, chatMember, chatID, messageID)
+		case "iampoor":
+			handlePoorCommand(bot, chatMember, chatID, messageID)
 		}
 	} else {
 		log.Printf("%s 不是管理员\n", username)
