@@ -505,7 +505,7 @@ func handleHelpCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 		"/sign 用户签到\n"+
 		"/my 查询积分\n"+
 		"/iampoor 领取低保\n"+
-		"玩法: #\n"+
+		"玩法: #单 20\n"+
 		"默认开奖周期: 1分钟")
 	msgConfig.ReplyToMessageID = messageID
 	sentMsg, err := sendMessage(bot, &msgConfig)
