@@ -119,6 +119,11 @@ func handleBettingCommand(bot *tgbotapi.BotAPI, userID int64, chatID int64, mess
 
 	// 获取下注类型和下注积分
 	betType := parts[0][1:]
+
+	if betType != "单" && betType != "双" && betType != "大" && betType != "小" && betType != "豹子" {
+		return
+	}
+
 	betAmount, err := strconv.Atoi(parts[1])
 	if err != nil || betAmount <= 0 {
 		return
@@ -500,6 +505,7 @@ func handleHelpCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 		"/sign 用户签到\n"+
 		"/my 查询积分\n"+
 		"/iampoor 领取低保\n"+
+		"玩法: #\n"+
 		"默认开奖周期: 1分钟")
 	msgConfig.ReplyToMessageID = messageID
 	sentMsg, err := sendMessage(bot, &msgConfig)
