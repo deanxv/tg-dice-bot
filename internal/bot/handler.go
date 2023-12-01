@@ -499,8 +499,8 @@ func handleStartCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 // handleHelpCommand 处理 "help" 命令。
 func handleHelpCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 	msgConfig := tgbotapi.NewMessage(chatID, "/help帮助\n"+
-		"/start-roll 开启\n"+
-		"/stop-roll 关闭\n"+
+		"/startroll 开启\n"+
+		"/stoproll 关闭\n"+
 		"/register 用户注册\n"+
 		"/sign 用户签到\n"+
 		"/my 查询积分\n"+
