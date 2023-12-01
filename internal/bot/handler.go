@@ -86,8 +86,10 @@ func handleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 
 	if message.IsCommand() {
 		if message.Chat.IsGroup() {
+			log.Printf("message.Chat.IsGroup() %v", message.Chat.IsGroup())
 			handleGroupCommand(bot, user.UserName, chatMember, message.Command(), chatID, messageID)
 		} else {
+			log.Printf("message.Chat.IsGroup() %v", message.Chat.IsGroup())
 			handlePrivateCommand(bot, chatMember, chatID, messageID, message.Command())
 		}
 	} else if message.Text != "" {
