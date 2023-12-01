@@ -396,9 +396,9 @@ func registerUser(userID int64, userName string, chatID int64) error {
 // handlePrivateCommand 处理私聊中的命令。
 func handlePrivateCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatID int64, messageID int, command string) {
 	switch command {
-	case "stop":
+	case "stop-roll":
 		handleStopCommand(bot, chatID, messageID)
-	case "start":
+	case "start-roll":
 		handleStartCommand(bot, chatID, messageID)
 	case "help":
 		handleHelpCommand(bot, chatID, messageID)
@@ -499,13 +499,13 @@ func handleStartCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 // handleHelpCommand 处理 "help" 命令。
 func handleHelpCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 	msgConfig := tgbotapi.NewMessage(chatID, "/help帮助\n"+
-		"/start 开启机器人\n"+
-		"/stop 关闭机器人\n"+
+		"/start-roll 开启\n"+
+		"/stop-roll 关闭\n"+
 		"/register 用户注册\n"+
 		"/sign 用户签到\n"+
 		"/my 查询积分\n"+
 		"/iampoor 领取低保\n"+
-		"玩法例子(竞猜 单,下注 20): #单 20\n"+
+		"玩法例子(竞猜-单,下注-20): #单 20\n"+
 		"默认开奖周期: 1分钟")
 	msgConfig.ReplyToMessageID = messageID
 	sentMsg, err := sendMessage(bot, &msgConfig)
