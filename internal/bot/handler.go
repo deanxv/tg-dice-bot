@@ -356,7 +356,16 @@ func handleMyCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatI
 	} else {
 		msgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("%s 你的积分余额为%d", chatMember.User.LastName, user.Balance))
 		msgConfig.ReplyToMessageID = messageID
-		sendMessage(bot, &msgConfig)
+		sentMsg, _ := sendMessage(bot, &msgConfig)
+
+		go func(messageID int) {
+			time.Sleep(1 * time.Minute)
+			deleteMsg := tgbotapi.NewDeleteMessage(chatID, messageID)
+			_, err := bot.Request(deleteMsg)
+			if err != nil {
+				log.Println("删除消息错误:", err)
+			}
+		}(sentMsg.MessageID)
 	}
 }
 
