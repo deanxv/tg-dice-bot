@@ -472,10 +472,10 @@ func handleStartCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 	if issueNumberResult.Err() == nil {
 		result, _ := issueNumberResult.Result()
 		issueNumber = result
-		lotteryDrawTipMsgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("第%s期 1分钟后开奖", issueNumber))
+		lotteryDrawTipMsgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("第%s期 %d分钟后开奖", issueNumber, chatDiceConfig.LotteryDrawCycle))
 		sendMessage(bot, &lotteryDrawTipMsgConfig)
 	} else {
-		lotteryDrawTipMsgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("第%s期 1分钟后开奖", issueNumber))
+		lotteryDrawTipMsgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("第%s期 %d分钟后开奖", issueNumber, chatDiceConfig.LotteryDrawCycle))
 		sendMessage(bot, &lotteryDrawTipMsgConfig)
 		// 存储当前期号和对话ID
 		err := redisDB.Set(redisDB.Context(), redisKey, issueNumber, 0).Err()

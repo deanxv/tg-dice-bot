@@ -4,11 +4,11 @@ import "gorm.io/gorm"
 
 type BetRecord struct {
 	ID          uint   `gorm:"primarykey"`
-	UserID      int64  // 用户ID
-	ChatID      int64  // 对话ID，用于隔离对话
+	UserID      int64  `json:"user_id" gorm:"type:int(11);not null"` // 用户ID
+	ChatID      int64  `json:"chat_id" gorm:"type:int(11);not null"` // 对话ID，用于隔离对话
 	IssueNumber string `json:"issue_number" gorm:"type:varchar(64);not null"`
-	BetType     string // 下注类型
-	BetAmount   int    // 下注金额
+	BetType     string `json:"bet_type" gorm:"type:varchar(64);not null"` // 下注类型
+	BetAmount   int    `json:"bet_amount" gorm:"type:int(11);not null"`   // 下注金额
 	Timestamp   string `json:"timestamp" gorm:"type:varchar(255);not null"`
 }
 
