@@ -100,15 +100,16 @@ func handleBettingCommand(bot *tgbotapi.BotAPI, userID int64, chatID int64, mess
 
 	// 解析下注命令，示例命令格式：#单 20
 	// 这里需要根据实际需求进行合适的解析，示例中只是简单示范
-
+	log.Println("text:" + text)
 	parts := strings.Fields(text)
 	if len(parts) != 2 || !strings.HasPrefix(parts[0], "#") {
+		log.Println("text return")
 		return
 	}
 
 	// 获取下注类型和下注积分
 	betType := parts[0][1:]
-
+	log.Println("text betType: " + betType)
 	if betType != "单" && betType != "双" && betType != "大" && betType != "小" && betType != "豹子" {
 		return
 	}
@@ -117,6 +118,7 @@ func handleBettingCommand(bot *tgbotapi.BotAPI, userID int64, chatID int64, mess
 	if err != nil || betAmount <= 0 {
 		return
 	}
+	log.Printf("text betAmount: %d", betAmount)
 
 	var chatDiceConfig model.ChatDiceConfig
 	result := db.Where("enable = ? AND chat_id = ?", 1, chatID).First(&chatDiceConfig)
