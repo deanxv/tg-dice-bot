@@ -246,9 +246,9 @@ func handleGroupCommand(bot *tgbotapi.BotAPI, username string, chatMember tgbota
 	if chatMember.IsAdministrator() || chatMember.IsCreator() {
 		log.Printf("Admin UserName:%s", chatMember.User.UserName)
 		switch command {
-		case "stop":
+		case "stop-roll":
 			handleStopCommand(bot, chatID, messageID)
-		case "start":
+		case "start-roll":
 			handleStartCommand(bot, chatID, messageID)
 		}
 	}
