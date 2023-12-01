@@ -231,27 +231,33 @@ func storeBetRecord(bot *tgbotapi.BotAPI, userID int64, chatID int64, issueNumbe
 
 // handleGroupCommand 处理群聊中的命令。
 func handleGroupCommand(bot *tgbotapi.BotAPI, username string, chatMember tgbotapi.ChatMember, command string, chatID int64, messageID int) {
-	switch command {
-	case "help":
-		handleHelpCommand(bot, chatID, messageID)
-	case "register":
-		handleRegisterCommand(bot, chatMember, chatID, messageID)
-	case "sign":
-		handleSignInCommand(bot, chatMember, chatID, messageID)
-	case "my":
-		handleMyCommand(bot, chatMember, chatID, messageID)
-	case "iampoor":
-		handlePoorCommand(bot, chatMember, chatID, messageID)
-	}
-	if chatMember.IsAdministrator() || chatMember.IsCreator() {
-		log.Printf("Admin UserName:%s", chatMember.User.UserName)
-		switch command {
-		case "stoproll":
-			handleStopCommand(bot, chatID, messageID)
-		case "startroll":
-			handleStartCommand(bot, chatID, messageID)
+	if command == "start" {
+		if !chatMember.IsAdministrator() && !chatMember.IsCreator() {
+			msgConfig := tgbotapi.NewMessage(chatID, "请勿使用管理员命令")
+			msgConfig.ReplyToMessageID = messageID
+			sendMessage(bot, &msgConfig)
+			return
 		}
+		handleStartCommand(bot, chatID, messageID)
+	} else if command == "stop" {
+		if !chatMember.IsAdministrator() && !chatMember.IsCreator() {
+			msgConfig := tgbotapi.NewMessage(chatID, "请勿使用管理员命令")
+			msgConfig.ReplyToMessageID = messageID
+			sendMessage(bot, &msgConfig)
+			return
+			return
+		}
+		handleStopCommand(bot, chatID, messageID)
+	} else if command == "sign" {
+		handleSignInCommand(bot, chatMember, chatID, messageID)
+	} else if command == "my" {
+		handleMyCommand(bot, chatMember, chatID, messageID)
+	} else if command == "iampoor" {
+		handlePoorCommand(bot, chatMember, chatID, messageID)
+	} else if command == "help" {
+		handleHelpCommand(bot, chatID, messageID)
 	}
+
 }
 
 func handleRegisterCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatID int64, messageID int) {
@@ -396,9 +402,9 @@ func registerUser(userID int64, userName string, chatID int64) error {
 // handlePrivateCommand 处理私聊中的命令。
 func handlePrivateCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatID int64, messageID int, command string) {
 	switch command {
-	case "stoproll":
+	case "stop":
 		handleStopCommand(bot, chatID, messageID)
-	case "startroll":
+	case "roll":
 		handleStartCommand(bot, chatID, messageID)
 	case "help":
 		handleHelpCommand(bot, chatID, messageID)
