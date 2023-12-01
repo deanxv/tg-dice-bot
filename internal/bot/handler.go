@@ -183,6 +183,7 @@ func storeBetRecord(bot *tgbotapi.BotAPI, userID int64, chatID int64, issueNumbe
 			log.Println("发送注册提示消息错误:", err)
 			return err
 		}
+		return result.Error
 	}
 
 	// 检查用户余额是否足够
@@ -676,7 +677,7 @@ func updateBalance(betRecord model.BetRecord, lotteryRecord *model.LotteryRecord
 	defer userLock.Unlock()
 
 	var user model.TgUser
-	result := db.Where("user_id = ?", betRecord.UserID).First(&user)
+	result := db.Where("user_id = ? and chat_id = ?", betRecord.UserID, lotteryRecord.ChatID).First(&user)
 	if result.Error != nil {
 		log.Println("获取用户信息错误:", result.Error)
 		return
