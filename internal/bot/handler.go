@@ -686,7 +686,7 @@ func updateBalance(betRecord model.BetRecord, lotteryRecord *model.LotteryRecord
 	if betRecord.BetType == lotteryRecord.SingleDouble ||
 		betRecord.BetType == lotteryRecord.BigSmall {
 		user.Balance += betRecord.BetAmount * 2
-	} else if betRecord.BetType == "豹子" {
+	} else if betRecord.BetType == "豹子" && lotteryRecord.Triplet == 1 {
 		user.Balance += betRecord.BetAmount * 10
 	}
 
