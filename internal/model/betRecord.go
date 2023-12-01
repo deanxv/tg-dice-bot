@@ -4,7 +4,7 @@ import "gorm.io/gorm"
 
 type BetRecord struct {
 	ID          uint   `gorm:"primarykey"`
-	UserID      int64  `json:"user_id" gorm:"type:int(11);not null"` // 用户ID
+	UserID      int64  `json:"user_id" gorm:"type:bigint(20);not null"` // 用户ID
 	ChatID      int64  `json:"chat_id" gorm:"type:bigint(20);not null;index"`
 	IssueNumber string `json:"issue_number" gorm:"type:varchar(64);not null"`
 	BetType     string `json:"bet_type" gorm:"type:varchar(64);not null"` // 下注类型
