@@ -159,19 +159,10 @@ func handleBettingCommand(bot *tgbotapi.BotAPI, userID int64, chatID int64, mess
 	replyMsg := tgbotapi.NewMessage(chatID, "下注成功!")
 	replyMsg.ReplyToMessageID = messageID
 
-	sentMsg, err := bot.Send(replyMsg)
+	_, err = bot.Send(replyMsg)
 	if err != nil {
 		log.Println("发送消息错误:", err)
 	}
-
-	go func(messageID int) {
-		time.Sleep(1 * time.Minute)
-		deleteMsg := tgbotapi.NewDeleteMessage(chatID, messageID)
-		_, err := bot.Request(deleteMsg)
-		if err != nil {
-			log.Println("删除消息错误:", err)
-		}
-	}(sentMsg.MessageID)
 }
 
 // storeBetRecord 函数中扣除用户余额并保存下注记录
@@ -353,7 +344,16 @@ func handleMyCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatI
 		// 没有找到记录
 		msgConfig := tgbotapi.NewMessage(chatID, "请发送 /register 注册用户！")
 		msgConfig.ReplyToMessageID = messageID
-		sendMessage(bot, &msgConfig)
+		sentMsg, _ := sendMessage(bot, &msgConfig)
+
+		go func(messageID int) {
+			time.Sleep(1 * time.Minute)
+			deleteMsg := tgbotapi.NewDeleteMessage(chatID, messageID)
+			_, err := bot.Request(deleteMsg)
+			if err != nil {
+				log.Println("删除消息错误:", err)
+			}
+		}(sentMsg.MessageID)
 		return
 	} else if result.Error != nil {
 		log.Println("查询错误:", result.Error)
