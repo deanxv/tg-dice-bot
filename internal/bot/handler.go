@@ -91,6 +91,7 @@ func handleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 			handlePrivateCommand(bot, chatMember, chatID, messageID, message.Command())
 		}
 	} else if message.Text != "" {
+		log.Println("text:" + message.Text)
 		handleBettingCommand(bot, user.ID, chatID, messageID, message.Text)
 	}
 }
