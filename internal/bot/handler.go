@@ -85,11 +85,9 @@ func handleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 	}
 
 	if message.IsCommand() {
-		if message.Chat.IsGroup() {
-			log.Printf("handleGroupCommand message.Chat.IsGroup() %v", message.Chat.IsGroup())
+		if message.Chat.IsSuperGroup() || message.Chat.IsGroup() {
 			handleGroupCommand(bot, user.UserName, chatMember, message.Command(), chatID, messageID)
 		} else {
-			log.Printf(" handlePrivateCommand message.Chat.IsGroup() %v", message.Chat.IsGroup())
 			handlePrivateCommand(bot, chatMember, chatID, messageID, message.Command())
 		}
 	} else if message.Text != "" {
@@ -233,20 +231,16 @@ func storeBetRecord(bot *tgbotapi.BotAPI, userID int64, chatID int64, issueNumbe
 
 // handleGroupCommand 处理群聊中的命令。
 func handleGroupCommand(bot *tgbotapi.BotAPI, username string, chatMember tgbotapi.ChatMember, command string, chatID int64, messageID int) {
-	if command == "roll" {
+	if command == "start" {
 		if !chatMember.IsAdministrator() && !chatMember.IsCreator() {
-			log.Printf("chatMember.IsAdministrator():%v", chatMember.IsAdministrator())
-			log.Printf("chatMember.IsCreator():%v", chatMember.IsCreator())
 			msgConfig := tgbotapi.NewMessage(chatID, "请勿使用管理员命令")
 			msgConfig.ReplyToMessageID = messageID
 			sendMessage(bot, &msgConfig)
 			return
 		}
 		handleStartCommand(bot, chatID, messageID)
-	} else if command == "rollstop" {
+	} else if command == "stop" {
 		if !chatMember.IsAdministrator() && !chatMember.IsCreator() {
-			log.Printf("chatMember.IsAdministrator():%v", chatMember.IsAdministrator())
-			log.Printf("chatMember.IsCreator():%v", chatMember.IsCreator())
 			msgConfig := tgbotapi.NewMessage(chatID, "请勿使用管理员命令")
 			msgConfig.ReplyToMessageID = messageID
 			sendMessage(bot, &msgConfig)
@@ -409,7 +403,7 @@ func handlePrivateCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, 
 	switch command {
 	case "stop":
 		handleStopCommand(bot, chatID, messageID)
-	case "roll":
+	case "start":
 		handleStartCommand(bot, chatID, messageID)
 	case "help":
 		handleHelpCommand(bot, chatID, messageID)
@@ -510,8 +504,8 @@ func handleStartCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 // handleHelpCommand 处理 "help" 命令。
 func handleHelpCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 	msgConfig := tgbotapi.NewMessage(chatID, "/help帮助\n"+
-		"/startroll 开启\n"+
-		"/stoproll 关闭\n"+
+		"/start 开启\n"+
+		"/stop 关闭\n"+
 		"/register 用户注册\n"+
 		"/sign 用户签到\n"+
 		"/my 查询积分\n"+
