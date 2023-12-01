@@ -281,15 +281,12 @@ func handleRegisterCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember,
 			msgConfig.ReplyToMessageID = messageID
 			sendMessage(bot, &msgConfig)
 		}
-		return
 	} else if result.Error != nil {
 		log.Println("查询错误:", result.Error)
-		return
 	} else {
 		msgConfig := tgbotapi.NewMessage(chatID, "请勿重复注册！")
 		msgConfig.ReplyToMessageID = messageID
 		sendMessage(bot, &msgConfig)
-		return
 	}
 }
 
@@ -354,10 +351,8 @@ func handleMyCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatI
 				log.Println("删除消息错误:", err)
 			}
 		}(sentMsg.MessageID)
-		return
 	} else if result.Error != nil {
 		log.Println("查询错误:", result.Error)
-		return
 	} else {
 		msgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("%s 你的积分余额为%d", chatMember.User.LastName, user.Balance))
 		msgConfig.ReplyToMessageID = messageID
@@ -378,10 +373,8 @@ func handlePoorCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, cha
 		msgConfig := tgbotapi.NewMessage(chatID, "请发送 /register 注册用户！")
 		msgConfig.ReplyToMessageID = messageID
 		sendMessage(bot, &msgConfig)
-		return
 	} else if result.Error != nil {
 		log.Println("查询错误:", result.Error)
-		return
 	} else {
 		if user.Balance > 1000 {
 			msgConfig := tgbotapi.NewMessage(chatID, "1000积分以下才可以领取低保哦")
