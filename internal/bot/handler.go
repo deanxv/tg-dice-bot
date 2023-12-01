@@ -437,12 +437,12 @@ func handleStopCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 
 // handleStartCommand 处理 "start" 命令。
 func handleStartCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
-	var chatDiceConfig model.ChatDiceConfig
+	var chatDiceConfig *model.ChatDiceConfig
 	// 更新开奖配置
 	chatDiceConfigResult := db.First(&chatDiceConfig, "chat_id = ?", chatID)
 	if errors.Is(chatDiceConfigResult.Error, gorm.ErrRecordNotFound) {
 		// 开奖配置不存在 则保存
-		chatDiceConfig := model.ChatDiceConfig{
+		chatDiceConfig = &model.ChatDiceConfig{
 			ChatID:           chatID,
 			LotteryDrawCycle: 1, // 开奖周期(分钟)
 			Enable:           1, // 开启状态
