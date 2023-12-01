@@ -244,6 +244,7 @@ func handleGroupCommand(bot *tgbotapi.BotAPI, username string, chatMember tgbota
 		handlePoorCommand(bot, chatMember, chatID, messageID)
 	}
 	if chatMember.IsAdministrator() || chatMember.IsCreator() {
+		log.Printf("Admin UserName:%s", chatMember.User.UserName)
 		switch command {
 		case "stop":
 			handleStopCommand(bot, chatID, messageID)
