@@ -247,6 +247,8 @@ func handleGroupCommand(bot *tgbotapi.BotAPI, username string, chatMember tgbota
 			return
 		}
 		handleStopCommand(bot, chatID, messageID)
+	} else if command == "register" {
+		handleRegisterCommand(bot, chatMember, chatID, messageID)
 	} else if command == "sign" {
 		handleSignInCommand(bot, chatMember, chatID, messageID)
 	} else if command == "my" {
