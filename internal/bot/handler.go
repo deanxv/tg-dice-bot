@@ -246,9 +246,9 @@ func handleGroupCommand(bot *tgbotapi.BotAPI, username string, chatMember tgbota
 	if chatMember.IsAdministrator() || chatMember.IsCreator() {
 		log.Printf("Admin UserName:%s", chatMember.User.UserName)
 		switch command {
-		case "stop-roll":
+		case "stoproll":
 			handleStopCommand(bot, chatID, messageID)
-		case "start-roll":
+		case "startroll":
 			handleStartCommand(bot, chatID, messageID)
 		}
 	}
@@ -396,9 +396,9 @@ func registerUser(userID int64, userName string, chatID int64) error {
 // handlePrivateCommand 处理私聊中的命令。
 func handlePrivateCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatID int64, messageID int, command string) {
 	switch command {
-	case "stop-roll":
+	case "stoproll":
 		handleStopCommand(bot, chatID, messageID)
-	case "start-roll":
+	case "startroll":
 		handleStartCommand(bot, chatID, messageID)
 	case "help":
 		handleHelpCommand(bot, chatID, messageID)
