@@ -619,7 +619,9 @@ func handleDiceRoll(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) (nex
 
 	//issueNumberInt, _ := strconv.Atoi(issueNumber)
 	nextIssueNumber = time.Now().Format("20060102150405")
-	lotteryDrawTipMsgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("第%s期 1分钟后开奖", nextIssueNumber))
+	var chatDiceConfig model.ChatDiceConfig
+	db.Where("enable = ? AND chat_id = ?", 1, chatID).First(&chatDiceConfig)
+	lotteryDrawTipMsgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("第%s期 %d分钟后开奖", nextIssueNumber, chatDiceConfig.LotteryDrawCycle))
 	sendMessage(bot, &lotteryDrawTipMsgConfig)
 
 	// 设置新的期号和对话ID
