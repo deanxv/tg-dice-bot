@@ -97,20 +97,6 @@ func handleMessage(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 
 // handleBettingCommand 处理下注命令
 func handleBettingCommand(bot *tgbotapi.BotAPI, userID int64, chatID int64, messageID int, text string) {
-	var chatDiceConfig model.ChatDiceConfig
-	result := db.Where("enable = ? AND chat_id = ?", 1, chatID).First(&chatDiceConfig)
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		registrationMsg := tgbotapi.NewMessage(chatID, "功能未开启！")
-		registrationMsg.ReplyToMessageID = messageID
-		_, err := bot.Send(registrationMsg)
-		if err != nil {
-			log.Println("功能未开启提示消息错误:", err)
-		}
-		return
-	} else if result.Error != nil {
-		log.Println("下注命令错误", result.Error)
-		return
-	}
 
 	// 解析下注命令，示例命令格式：#单 20
 	// 这里需要根据实际需求进行合适的解析，示例中只是简单示范
@@ -132,6 +118,20 @@ func handleBettingCommand(bot *tgbotapi.BotAPI, userID int64, chatID int64, mess
 		return
 	}
 
+	var chatDiceConfig model.ChatDiceConfig
+	result := db.Where("enable = ? AND chat_id = ?", 1, chatID).First(&chatDiceConfig)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		registrationMsg := tgbotapi.NewMessage(chatID, "功能未开启！")
+		registrationMsg.ReplyToMessageID = messageID
+		_, err := bot.Send(registrationMsg)
+		if err != nil {
+			log.Println("功能未开启提示消息错误:", err)
+		}
+		return
+	} else if result.Error != nil {
+		log.Println("下注命令错误", result.Error)
+		return
+	}
 	// 获取当前进行的期号
 	redisKey := fmt.Sprintf(RedisCurrentIssueKey, chatID)
 	issueNumberResult := redisDB.Get(redisDB.Context(), redisKey)
