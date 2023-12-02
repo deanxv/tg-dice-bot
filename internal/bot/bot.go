@@ -1,12 +1,15 @@
 package bot
 
 import (
+	"errors"
+	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"gorm.io/gorm"
 	"log"
 	"os"
 	"tg-dice-bot/internal/database"
 	"tg-dice-bot/internal/model"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 )
@@ -25,6 +28,8 @@ func StartBot() {
 
 	bot := initTelegramBot()
 
+	initDiceTask(bot)
+
 	updateConfig := tgbotapi.NewUpdate(0)
 	updateConfig.Timeout = 60
 	updates := bot.GetUpdatesChan(updateConfig)
@@ -36,6 +41,37 @@ func StartBot() {
 			go handleCallbackQuery(bot, update.CallbackQuery)
 		}
 	}
+}
+
+func initDiceTask(bot *tgbotapi.BotAPI) {
+
+	// 查出所有已开启的对话
+	chatDiceConfigs, err := model.ListByEnable(db, 1)
+	if err != nil {
+		log.Fatal("初始化任务失败:", err)
+	}
+	for _, config := range chatDiceConfigs {
+		// 查询当前对话在缓存中是否有未执行的任务
+		redisKey := fmt.Sprintf(RedisCurrentIssueKey, config.ChatID)
+		issueNumberResult := redisDB.Get(redisDB.Context(), redisKey)
+		if errors.Is(issueNumberResult.Err(), redis.Nil) || issueNumberResult == nil {
+			// 没有未开奖的任务，开始新的期号
+			log.Printf("键 %s 不存在", redisKey)
+			issueNumber := time.Now().Format("20060102150405")
+
+			go StartDice(bot, config.ChatID, issueNumber)
+			continue
+		} else if issueNumberResult.Err() != nil {
+			log.Println("获取值时发生错误:", issueNumberResult.Err())
+			continue
+		} else {
+			// 有未开奖的任务
+			result, _ := issueNumberResult.Result()
+			go StartDice(bot, config.ChatID, result)
+			continue
+		}
+	}
+
 }
 
 func initDB() {
@@ -77,7 +113,7 @@ func initTelegramBot() *tgbotapi.BotAPI {
 		log.Panic(err)
 	}
 
-	bot.Debug = true
+	bot.Debug = false
 	log.Printf("已授权帐户 %s", bot.Self.UserName)
 	return bot
 }
