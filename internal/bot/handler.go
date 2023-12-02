@@ -298,15 +298,15 @@ func handleSignInCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, c
 
 	var user model.TgUser
 	result := db.Where("user_id = ? AND chat_id = ?", chatMember.User.ID, chatID).First(&user)
-	if result.Error != nil {
-		log.Println("查询错误:", result.Error)
-		return
-	} else if user.ID == 0 {
+
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		// 没有找到记录
 		msgConfig := tgbotapi.NewMessage(chatID, "请发送 /register 注册用户！")
 		msgConfig.ReplyToMessageID = messageID
 		sendMessage(bot, &msgConfig)
 		return
+	} else if result.Error != nil {
+		log.Println("查询错误:", result.Error)
 	} else {
 		if user.SignInTime != "" {
 			signInTime, err := time.Parse("2006-01-02 15:04:05", user.SignInTime)
@@ -330,7 +330,6 @@ func handleSignInCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, c
 		msgConfig := tgbotapi.NewMessage(chatID, "签到成功！奖励1000积分！")
 		msgConfig.ReplyToMessageID = messageID
 		sendMessage(bot, &msgConfig)
-
 	}
 }
 
@@ -518,7 +517,7 @@ func handleStartCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 
 // handleHelpCommand 处理 "help" 命令。
 func handleHelpCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
-	msgConfig := tgbotapi.NewMessage(chatID, "/help帮助\n"+
+	msgConfig := tgbotapi.NewMessage(chatID, "/help 帮助\n"+
 		"/start 开启\n"+
 		"/stop 关闭\n"+
 		"/register 用户注册\n"+
