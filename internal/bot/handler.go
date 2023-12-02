@@ -566,8 +566,9 @@ func getChatMember(bot *tgbotapi.BotAPI, chatID int64, userID int) (tgbotapi.Cha
 
 // stopDice 停止特定聊天ID的骰子滚动。
 func stopDice(chatID int64) {
-	stopMutex.Lock()
-	defer stopMutex.Unlock()
+	chatLock := getChatLock(chatID)
+	chatLock.Lock()
+	defer chatLock.Unlock()
 
 	if stopFlag, ok := stopFlags[chatID]; ok {
 		log.Printf("停止聊天ID的任务：%v", chatID)
