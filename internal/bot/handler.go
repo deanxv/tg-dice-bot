@@ -581,8 +581,10 @@ func stopDice(chatID int64) {
 // startDice 启动特定聊天ID的骰子滚动。
 func StartDice(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) {
 	stopDice(chatID)
-	stopMutex.Lock()
-	defer stopMutex.Unlock()
+
+	chatLock := getChatLock(chatID)
+	chatLock.Lock()
+	defer chatLock.Unlock()
 
 	stopFlags[chatID] = make(chan struct{})
 	go func(stopCh <-chan struct{}) {
