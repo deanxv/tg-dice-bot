@@ -384,7 +384,7 @@ func handlePoorCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, cha
 	} else if result.Error != nil {
 		log.Println("查询错误:", result.Error)
 	} else {
-		if user.Balance > 1000 {
+		if user.Balance >= 1000 {
 			msgConfig := tgbotapi.NewMessage(chatID, "1000积分以下才可以领取低保哦")
 			msgConfig.ReplyToMessageID = messageID
 			sendMessage(bot, &msgConfig)
