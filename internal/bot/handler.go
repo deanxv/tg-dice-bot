@@ -735,7 +735,7 @@ func determineResult(count int) (string, string) {
 	var singleOrDouble string
 	var bigOrSmall string
 
-	if count < 10 {
+	if count <= 10 {
 		bigOrSmall = "小"
 	} else {
 		bigOrSmall = "大"
