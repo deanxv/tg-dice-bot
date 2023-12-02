@@ -67,6 +67,7 @@ func initDiceTask(bot *tgbotapi.BotAPI) {
 		} else {
 			// 有未开奖的任务
 			result, _ := issueNumberResult.Result()
+			log.Println("有未开奖的任务期号:%s", result)
 			go StartDice(bot, config.ChatID, result)
 			continue
 		}
