@@ -298,15 +298,15 @@ func handleSignInCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, c
 
 	var user model.TgUser
 	result := db.Where("user_id = ? AND chat_id = ?", chatMember.User.ID, chatID).First(&user)
-	if result.Error != nil {
-		log.Println("查询错误:", result.Error)
-		return
-	} else if user.ID == 0 {
+
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		// 没有找到记录
 		msgConfig := tgbotapi.NewMessage(chatID, "请发送 /register 注册用户！")
 		msgConfig.ReplyToMessageID = messageID
 		sendMessage(bot, &msgConfig)
 		return
+	} else if result.Error != nil {
+		log.Println("查询错误:", result.Error)
 	} else {
 		if user.SignInTime != "" {
 			signInTime, err := time.Parse("2006-01-02 15:04:05", user.SignInTime)
@@ -330,7 +330,6 @@ func handleSignInCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, c
 		msgConfig := tgbotapi.NewMessage(chatID, "签到成功！奖励1000积分！")
 		msgConfig.ReplyToMessageID = messageID
 		sendMessage(bot, &msgConfig)
-
 	}
 }
 
@@ -385,7 +384,7 @@ func handlePoorCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, cha
 	} else if result.Error != nil {
 		log.Println("查询错误:", result.Error)
 	} else {
-		if user.Balance > 1000 {
+		if user.Balance >= 1000 {
 			msgConfig := tgbotapi.NewMessage(chatID, "1000积分以下才可以领取低保哦")
 			msgConfig.ReplyToMessageID = messageID
 			sendMessage(bot, &msgConfig)
@@ -496,12 +495,7 @@ func handleStartCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 	// 查找上个未开奖的期号
 	redisKey := fmt.Sprintf(RedisCurrentIssueKey, chatID)
 	issueNumberResult := redisDB.Get(redisDB.Context(), redisKey)
-	if issueNumberResult.Err() == nil {
-		result, _ := issueNumberResult.Result()
-		issueNumber = result
-		lotteryDrawTipMsgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("第%s期 %d分钟后开奖", issueNumber, chatDiceConfig.LotteryDrawCycle))
-		sendMessage(bot, &lotteryDrawTipMsgConfig)
-	} else {
+	if errors.Is(issueNumberResult.Err(), redis.Nil) || issueNumberResult == nil {
 		lotteryDrawTipMsgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("第%s期 %d分钟后开奖", issueNumber, chatDiceConfig.LotteryDrawCycle))
 		sendMessage(bot, &lotteryDrawTipMsgConfig)
 		// 存储当前期号和对话ID
@@ -510,15 +504,23 @@ func handleStartCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 			log.Println("存储新期号和对话ID错误:", err)
 			return
 		}
+	} else if issueNumberResult.Err() != nil {
+		log.Println("获取值时发生错误:", issueNumberResult.Err())
+		return
+	} else {
+		result, _ := issueNumberResult.Result()
+		issueNumber = result
+		lotteryDrawTipMsgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("第%s期 %d分钟后开奖", issueNumber, chatDiceConfig.LotteryDrawCycle))
+		sendMessage(bot, &lotteryDrawTipMsgConfig)
 	}
 
 	//redisKey := fmt.Sprintf(RedisCurrentIssueKey, chatID)
-	go startDice(bot, chatID, issueNumber)
+	go StartDice(bot, chatID, issueNumber)
 }
 
 // handleHelpCommand 处理 "help" 命令。
 func handleHelpCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
-	msgConfig := tgbotapi.NewMessage(chatID, "/help帮助\n"+
+	msgConfig := tgbotapi.NewMessage(chatID, "/help 帮助\n"+
 		"/start 开启\n"+
 		"/stop 关闭\n"+
 		"/register 用户注册\n"+
@@ -564,8 +566,9 @@ func getChatMember(bot *tgbotapi.BotAPI, chatID int64, userID int) (tgbotapi.Cha
 
 // stopDice 停止特定聊天ID的骰子滚动。
 func stopDice(chatID int64) {
-	stopMutex.Lock()
-	defer stopMutex.Unlock()
+	chatLock := getChatLock(chatID)
+	chatLock.Lock()
+	defer chatLock.Unlock()
 
 	if stopFlag, ok := stopFlags[chatID]; ok {
 		log.Printf("停止聊天ID的任务：%v", chatID)
@@ -577,10 +580,12 @@ func stopDice(chatID int64) {
 }
 
 // startDice 启动特定聊天ID的骰子滚动。
-func startDice(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) {
+func StartDice(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) {
 	stopDice(chatID)
-	stopMutex.Lock()
-	defer stopMutex.Unlock()
+
+	chatLock := getChatLock(chatID)
+	chatLock.Lock()
+	defer chatLock.Unlock()
 
 	stopFlags[chatID] = make(chan struct{})
 	go func(stopCh <-chan struct{}) {
@@ -588,14 +593,6 @@ func startDice(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) {
 		db.Where("chat_id = ?", chatID).First(&chatDiceConfig)
 		ticker := time.NewTicker(time.Duration(chatDiceConfig.LotteryDrawCycle) * time.Minute)
 		defer ticker.Stop()
-
-		// 查找上个未开奖的期号
-		redisKey := fmt.Sprintf(RedisCurrentIssueKey, chatID)
-		issueNumberResult := redisDB.Get(redisDB.Context(), redisKey)
-		if issueNumberResult == nil {
-			result, _ := issueNumberResult.Result()
-			issueNumber = result
-		}
 
 		for {
 			select {
