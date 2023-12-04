@@ -208,15 +208,18 @@ func storeBetRecord(bot *tgbotapi.BotAPI, userID int64, chatID int64, issueNumbe
 		log.Println("扣除用户余额错误:", result.Error)
 		return result.Error
 	}
-
+	currentTime := time.Now().Format("2006-01-02 15:04:05")
 	// 保存下注记录
 	betRecord := model.BetRecord{
-		UserID:      userID,
-		ChatID:      chatID,
-		BetType:     betType,
-		BetAmount:   betAmount,
-		IssueNumber: issueNumber,
-		Timestamp:   time.Now().Format("2006-01-02 15:04:05"),
+		UserID:        userID,
+		ChatID:        chatID,
+		BetType:       betType,
+		BetAmount:     betAmount,
+		IssueNumber:   issueNumber,
+		SettleStatus:  0,
+		BetResultType: nil,
+		UpdateTime:    currentTime,
+		CreateTime:    currentTime,
 	}
 
 	result = db.Create(&betRecord)
@@ -259,6 +262,8 @@ func handleGroupCommand(bot *tgbotapi.BotAPI, username string, chatMember tgbota
 		handlePoorCommand(bot, chatMember, chatID, messageID)
 	} else if command == "help" {
 		handleHelpCommand(bot, chatID, messageID)
+	} else if command == "myhistory" {
+		handleMyHistoryCommand(bot, chatMember, chatID, messageID)
 	}
 
 }
@@ -384,17 +389,36 @@ func handlePoorCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, cha
 	} else if result.Error != nil {
 		log.Println("查询错误:", result.Error)
 	} else {
-		if user.Balance >= 1000 {
-			msgConfig := tgbotapi.NewMessage(chatID, "1000积分以下才可以领取低保哦")
+		//查询下注记录
+
+		var betRecord model.BetRecord
+		betRecord.ChatID = chatID
+		betRecord.UserID = chatMember.User.ID
+		betRecord.SettleStatus = 0
+		betRecords, err := model.ListBySettleStatus(db, &betRecord)
+
+		if len(betRecords) == 0 {
+			// 记录为空
+			if user.Balance >= 1000 {
+				msgConfig := tgbotapi.NewMessage(chatID, "1000积分以下才可以领取低保哦")
+				msgConfig.ReplyToMessageID = messageID
+				sendMessage(bot, &msgConfig)
+				return
+			}
+			user.Balance += 1000
+			result = db.Save(&user)
+			msgConfig := tgbotapi.NewMessage(chatID, "领取低保成功！获得1000积分！")
 			msgConfig.ReplyToMessageID = messageID
 			sendMessage(bot, &msgConfig)
 			return
+		} else if err != nil {
+			log.Println("查询下注记录错误", result.Error)
+			return
+		} else {
+			msgConfig := tgbotapi.NewMessage(chatID, "你有未结算的下注记录,开奖结算后再领取吧")
+			msgConfig.ReplyToMessageID = messageID
+			sendMessage(bot, &msgConfig)
 		}
-		user.Balance += 1000
-		result = db.Save(&user)
-		msgConfig := tgbotapi.NewMessage(chatID, "领取低保成功！获得1000积分！")
-		msgConfig.ReplyToMessageID = messageID
-		sendMessage(bot, &msgConfig)
 	}
 }
 
@@ -429,6 +453,8 @@ func handlePrivateCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, 
 		handleMyCommand(bot, chatMember, chatID, messageID)
 	case "iampoor":
 		handlePoorCommand(bot, chatMember, chatID, messageID)
+	case "myhistory":
+		handleMyHistoryCommand(bot, chatMember, chatID, messageID)
 	}
 }
 
@@ -526,6 +552,7 @@ func handleHelpCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 		"/register 用户注册\n"+
 		"/sign 用户签到\n"+
 		"/my 查询积分\n"+
+		"/myhistory 查询历史下注记录\n"+
 		"/iampoor 领取低保\n"+
 		"玩法例子(竞猜-单,下注-20): #单 20\n"+
 		"默认开奖周期: 1分钟")
@@ -542,6 +569,55 @@ func handleHelpCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 			log.Println("删除消息错误:", err)
 		}
 	}(sentMsg.MessageID)
+}
+
+// handleMyHistoryCommand 处理 "myhistory" 命令。
+func handleMyHistoryCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatID int64, messageID int) {
+	// 查询下注记录
+	var betRecord model.BetRecord
+	betRecord.ChatID = chatID
+	betRecord.UserID = chatMember.User.ID
+	betRecords, err := model.ListByChatAndUser(db, &betRecord)
+
+	msgConfig := tgbotapi.NewMessage(chatID, "")
+	msgConfig.ReplyToMessageID = messageID
+
+	if len(betRecords) == 0 {
+		// 下注记录为空
+		msgConfig.Text = "你还没有下注记录哦"
+		sendMessage(bot, &msgConfig)
+		return
+	} else if err != nil {
+		log.Println("查询下注记录错误", err)
+		return
+	} else {
+		msgText := "你的下注记录如下:\n"
+
+		for _, record := range betRecords {
+			betResultType := ""
+			if *record.BetResultType == 1 {
+				betResultType = "赢"
+			} else if *record.BetResultType == 0 {
+				betResultType = "输"
+			}
+			msgText += fmt.Sprintf("%s期: %s %d %s\n", record.IssueNumber, record.BetType, record.BetAmount, betResultType)
+		}
+
+		msgConfig.Text = msgText
+		sentMsg, _ := sendMessage(bot, &msgConfig)
+
+		go func(messageID int) {
+			time.Sleep(1 * time.Minute)
+			deleteMsg := tgbotapi.NewDeleteMessage(chatID, messageID)
+			_, err := bot.Request(deleteMsg)
+			if err != nil {
+				log.Println("删除消息错误:", err)
+			}
+		}(sentMsg.MessageID)
+
+		return
+	}
+
 }
 
 // sendMessage 使用提供的消息配置发送消息。
@@ -685,8 +761,10 @@ func updateBalance(betRecord model.BetRecord, lotteryRecord *model.LotteryRecord
 	userLock.Lock()
 	defer userLock.Unlock()
 
+	tx := db.Begin()
+
 	var user model.TgUser
-	result := db.Where("user_id = ? and chat_id = ?", betRecord.UserID, lotteryRecord.ChatID).First(&user)
+	result := tx.Where("user_id = ? and chat_id = ?", betRecord.UserID, lotteryRecord.ChatID).First(&user)
 	if result.Error != nil {
 		log.Println("获取用户信息错误:", result.Error)
 		return
@@ -695,13 +773,38 @@ func updateBalance(betRecord model.BetRecord, lotteryRecord *model.LotteryRecord
 	if betRecord.BetType == lotteryRecord.SingleDouble ||
 		betRecord.BetType == lotteryRecord.BigSmall {
 		user.Balance += betRecord.BetAmount * 2
+		betResultType := 1
+		betRecord.BetResultType = &betResultType
 	} else if betRecord.BetType == "豹子" && lotteryRecord.Triplet == 1 {
 		user.Balance += betRecord.BetAmount * 10
+		betResultType := 1
+		betRecord.BetResultType = &betResultType
+	} else {
+		betResultType := 0
+		betRecord.BetResultType = &betResultType
 	}
 
-	result = db.Save(&user)
+	result = tx.Save(&user)
 	if result.Error != nil {
 		log.Println("更新用户余额错误:", result.Error)
+		tx.Rollback()
+		return
+	}
+
+	// 更新下注记录表
+	betRecord.SettleStatus = 1
+	betRecord.UpdateTime = time.Now().Format("2006-01-02 15:04:05")
+	result = tx.Save(&betRecord)
+	if result.Error != nil {
+		log.Println("更新下注记录错误:", result.Error)
+		tx.Rollback()
+		return
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		// 提交事务时出现异常，回滚事务
+		tx.Rollback()
 	}
 }
 
