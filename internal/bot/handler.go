@@ -595,11 +595,15 @@ func handleMyHistoryCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember
 
 		for _, record := range betRecords {
 			betResultType := ""
-			if *record.BetResultType == 1 {
-				betResultType = "赢"
-			} else if *record.BetResultType == 0 {
-				betResultType = "输"
+
+			if record.BetResultType != nil {
+				if *record.BetResultType == 1 {
+					betResultType = "赢"
+				} else if *record.BetResultType == 0 {
+					betResultType = "输"
+				}
 			}
+
 			msgText += fmt.Sprintf("%s期: %s %d %s\n", record.IssueNumber, record.BetType, record.BetAmount, betResultType)
 		}
 
