@@ -177,7 +177,7 @@ func storeBetRecord(bot *tgbotapi.BotAPI, userID int64, chatID int64, issueNumbe
 	result := db.Where("user_id = ? AND chat_id = ?", userID, chatID).First(&user)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		// 用户不存在，发送注册提示
-		registrationMsg := tgbotapi.NewMessage(chatID, "你还未注册，使用 /register 进行注册。")
+		registrationMsg := tgbotapi.NewMessage(chatID, "您还未注册，使用 /register 进行注册。")
 		registrationMsg.ReplyToMessageID = messageID
 		_, err := bot.Send(registrationMsg)
 		if err != nil {
@@ -190,11 +190,11 @@ func storeBetRecord(bot *tgbotapi.BotAPI, userID int64, chatID int64, issueNumbe
 	// 检查用户余额是否足够
 	if user.Balance < betAmount {
 		// 用户不存在，发送注册提示
-		balanceInsufficientMsg := tgbotapi.NewMessage(chatID, "你的余额不足！")
+		balanceInsufficientMsg := tgbotapi.NewMessage(chatID, "您的余额不足!")
 		balanceInsufficientMsg.ReplyToMessageID = messageID
 		_, err := bot.Send(balanceInsufficientMsg)
 		if err != nil {
-			log.Println("你的余额不足提示错误:", err)
+			log.Println("您的余额不足提示错误:", err)
 			return err
 		} else {
 			return errors.New("余额不足")
@@ -358,7 +358,7 @@ func handleMyCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatI
 	} else if result.Error != nil {
 		log.Println("查询错误:", result.Error)
 	} else {
-		msgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("%s 你的积分余额为%d", chatMember.User.LastName, user.Balance))
+		msgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("%s 您的积分余额为%d", chatMember.User.LastName, user.Balance))
 		msgConfig.ReplyToMessageID = messageID
 		sentMsg, _ := sendMessage(bot, &msgConfig)
 
@@ -415,7 +415,7 @@ func handlePoorCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, cha
 			log.Println("查询下注记录错误", result.Error)
 			return
 		} else {
-			msgConfig := tgbotapi.NewMessage(chatID, "你有未结算的下注记录,开奖结算后再领取吧")
+			msgConfig := tgbotapi.NewMessage(chatID, "您有未开奖的下注记录,开奖结算后再领取吧!")
 			msgConfig.ReplyToMessageID = messageID
 			sendMessage(bot, &msgConfig)
 		}
@@ -584,14 +584,14 @@ func handleMyHistoryCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember
 
 	if len(betRecords) == 0 {
 		// 下注记录为空
-		msgConfig.Text = "你还没有下注记录哦"
+		msgConfig.Text = "您还没有下注记录哦!"
 		sendMessage(bot, &msgConfig)
 		return
 	} else if err != nil {
 		log.Println("查询下注记录错误", err)
 		return
 	} else {
-		msgText := "你的下注记录如下:\n"
+		msgText := "您的下注记录如下:\n"
 
 		for _, record := range betRecords {
 			betResultType := ""
@@ -602,6 +602,8 @@ func handleMyHistoryCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember
 				} else if *record.BetResultType == 0 {
 					betResultType = "输"
 				}
+			} else {
+				betResultType = "[未开奖]"
 			}
 
 			msgText += fmt.Sprintf("%s期: %s %d %s\n", record.IssueNumber, record.BetType, record.BetAmount, betResultType)
