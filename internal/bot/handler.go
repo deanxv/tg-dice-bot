@@ -598,7 +598,7 @@ func handleMyHistoryCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember
 			betResultAmount := ""
 			if record.BetResultType != nil {
 				if *record.BetResultType == 1 {
-					if record.BetType == "单" || record.BetType == "双" {
+					if record.BetType == "单" || record.BetType == "双" || record.BetType == "大" || record.BetType == "小" {
 						betResultAmount = fmt.Sprintf("+%d", record.BetAmount*2)
 					} else if record.BetType == "豹子" {
 						betResultAmount = fmt.Sprintf("+%d", record.BetAmount*10)
