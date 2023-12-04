@@ -37,7 +37,7 @@ func ListBySettleStatus(db *gorm.DB, betRecord *BetRecord) ([]BetRecord, error) 
 
 func ListByChatAndUser(db *gorm.DB, betRecord *BetRecord) ([]BetRecord, error) {
 	var betRecords []BetRecord
-	result := db.Where("user_id = ? AND chat_id = ?", betRecord.UserID, betRecord.ChatID).Limit(10).Find(&betRecords)
+	result := db.Where("user_id = ? AND chat_id = ?", betRecord.UserID, betRecord.ChatID).Limit(10).Order("issue_number desc").Find(&betRecords)
 	if result.Error != nil {
 		return nil, result.Error
 	}
