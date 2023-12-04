@@ -358,7 +358,7 @@ func handleMyCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatI
 	} else if result.Error != nil {
 		log.Println("查询错误:", result.Error)
 	} else {
-		msgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("%s 您的积分余额为%d", chatMember.User.LastName, user.Balance))
+		msgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("%s 您的积分余额为%d", chatMember.User.FirstName, user.Balance))
 		msgConfig.ReplyToMessageID = messageID
 		sentMsg, _ := sendMessage(bot, &msgConfig)
 
