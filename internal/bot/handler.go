@@ -316,7 +316,7 @@ func handleSignInCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, c
 		if user.SignInTime != "" {
 			signInTime, err := time.Parse("2006-01-02 15:04:05", user.SignInTime)
 			if err != nil {
-				fmt.Println("时间解析错误:", err)
+				log.Println("时间解析错误:", err)
 				return
 			}
 			// 获取当前时间
