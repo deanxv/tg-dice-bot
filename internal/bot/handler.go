@@ -869,17 +869,15 @@ func formatMessage(valueA int, valueB int, valueC int, count int, singleOrDouble
 		tripletStr = "【豹子】\n"
 	}
 	return fmt.Sprintf(""+
-		"点数: %d %d %d \n"+
+		"点数: %d %d %d %s\n"+
 		"总点数: %d \n"+
 		"[单/双]: %s \n"+
 		"[大/小]: %s \n"+
-		"%s"+
 		"期号: %s ",
-		valueA, valueB, valueC,
+		valueA, valueB, valueC, tripletStr,
 		count,
 		singleOrDouble,
 		bigOrSmall,
-		tripletStr,
 		issueNumber,
 	)
 }
