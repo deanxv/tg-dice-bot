@@ -4,7 +4,7 @@ import "gorm.io/gorm"
 
 type BetRecord struct {
 	ID            uint   `gorm:"primarykey"`
-	UserID        int64  `json:"user_id" gorm:"type:bigint(20);not null"` // 用户ID
+	TgUserID      int64  `json:"tg_user_id" gorm:"type:bigint(20);not null"` // 用户ID
 	ChatID        int64  `json:"chat_id" gorm:"type:bigint(20);not null;index"`
 	IssueNumber   string `json:"issue_number" gorm:"type:varchar(64);not null"`
 	BetType       string `json:"bet_type" gorm:"type:varchar(64);not null"`        // 下注类型
@@ -28,7 +28,7 @@ func GetBetRecordsByChatIDAndIssue(db *gorm.DB, chatID int64, issueNumber string
 // ListBySettleStatus
 func ListBySettleStatus(db *gorm.DB, betRecord *BetRecord) ([]BetRecord, error) {
 	var betRecords []BetRecord
-	result := db.Where("user_id = ? AND chat_id = ? AND settle_status = ?", betRecord.UserID, betRecord.ChatID, 0).Find(&betRecords)
+	result := db.Where("tg_user_id = ? AND chat_id = ? AND settle_status = ?", betRecord.TgUserID, betRecord.ChatID, 0).Find(&betRecords)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -37,7 +37,7 @@ func ListBySettleStatus(db *gorm.DB, betRecord *BetRecord) ([]BetRecord, error) 
 
 func ListByChatAndUser(db *gorm.DB, betRecord *BetRecord) ([]BetRecord, error) {
 	var betRecords []BetRecord
-	result := db.Where("user_id = ? AND chat_id = ?", betRecord.UserID, betRecord.ChatID).Limit(10).Order("issue_number desc").Find(&betRecords)
+	result := db.Where("tg_user_id = ? AND chat_id = ?", betRecord.TgUserID, betRecord.ChatID).Limit(10).Order("issue_number desc").Find(&betRecords)
 	if result.Error != nil {
 		return nil, result.Error
 	}

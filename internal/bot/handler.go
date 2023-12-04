@@ -174,7 +174,7 @@ func storeBetRecord(bot *tgbotapi.BotAPI, userID int64, chatID int64, issueNumbe
 
 	// 获取用户信息
 	var user model.TgUser
-	result := db.Where("user_id = ? AND chat_id = ?", userID, chatID).First(&user)
+	result := db.Where("tg_user_id = ? AND chat_id = ?", userID, chatID).First(&user)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		// 用户不存在，发送注册提示
 		registrationMsg := tgbotapi.NewMessage(chatID, "您还未注册，使用 /register 进行注册。")
@@ -211,7 +211,7 @@ func storeBetRecord(bot *tgbotapi.BotAPI, userID int64, chatID int64, issueNumbe
 	currentTime := time.Now().Format("2006-01-02 15:04:05")
 	// 保存下注记录
 	betRecord := model.BetRecord{
-		UserID:        userID,
+		TgUserID:      userID,
 		ChatID:        chatID,
 		BetType:       betType,
 		BetAmount:     betAmount,
@@ -275,7 +275,7 @@ func handleRegisterCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember,
 	defer userLock.Unlock()
 
 	var user model.TgUser
-	result := db.Where("user_id = ? AND chat_id = ?", chatMember.User.ID, chatID).First(&user)
+	result := db.Where("tg_user_id = ? AND chat_id = ?", chatMember.User.ID, chatID).First(&user)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		// 没有找到记录
 		err := registerUser(chatMember.User.ID, chatMember.User.UserName, chatID)
@@ -302,7 +302,7 @@ func handleSignInCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, c
 	defer userLock.Unlock()
 
 	var user model.TgUser
-	result := db.Where("user_id = ? AND chat_id = ?", chatMember.User.ID, chatID).First(&user)
+	result := db.Where("tg_user_id = ? AND chat_id = ?", chatMember.User.ID, chatID).First(&user)
 
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		// 没有找到记录
@@ -340,7 +340,7 @@ func handleSignInCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, c
 
 func handleMyCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatID int64, messageID int) {
 	var user model.TgUser
-	result := db.Where("user_id = ? AND chat_id = ?", chatMember.User.ID, chatID).First(&user)
+	result := db.Where("tg_user_id = ? AND chat_id = ?", chatMember.User.ID, chatID).First(&user)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		// 没有找到记录
 		msgConfig := tgbotapi.NewMessage(chatID, "请发送 /register 注册用户！")
@@ -380,7 +380,7 @@ func handlePoorCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, cha
 	defer userLock.Unlock()
 
 	var user model.TgUser
-	result := db.Where("user_id = ? AND chat_id = ?", chatMember.User.ID, chatID).First(&user)
+	result := db.Where("tg_user_id = ? AND chat_id = ?", chatMember.User.ID, chatID).First(&user)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		// 没有找到记录
 		msgConfig := tgbotapi.NewMessage(chatID, "请发送 /register 注册用户！")
@@ -393,7 +393,7 @@ func handlePoorCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, cha
 
 		var betRecord model.BetRecord
 		betRecord.ChatID = chatID
-		betRecord.UserID = chatMember.User.ID
+		betRecord.TgUserID = chatMember.User.ID
 		betRecord.SettleStatus = 0
 		betRecords, err := model.ListBySettleStatus(db, &betRecord)
 
@@ -426,7 +426,7 @@ func handlePoorCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, cha
 func registerUser(userID int64, userName string, chatID int64) error {
 	initialBalance := 1000
 	newUser := model.TgUser{
-		UserID:   userID,
+		TgUserID: userID,
 		ChatID:   chatID,
 		Username: userName,
 		Balance:  initialBalance,
@@ -576,7 +576,7 @@ func handleMyHistoryCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember
 	// 查询下注记录
 	var betRecord model.BetRecord
 	betRecord.ChatID = chatID
-	betRecord.UserID = chatMember.User.ID
+	betRecord.TgUserID = chatMember.User.ID
 	betRecords, err := model.ListByChatAndUser(db, &betRecord)
 
 	msgConfig := tgbotapi.NewMessage(chatID, "")
@@ -769,14 +769,14 @@ func handleDiceRoll(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) (nex
 func updateBalance(betRecord model.BetRecord, lotteryRecord *model.LotteryRecord) {
 
 	// 获取用户对应的互斥锁
-	userLock := getUserLock(betRecord.UserID)
+	userLock := getUserLock(betRecord.TgUserID)
 	userLock.Lock()
 	defer userLock.Unlock()
 
 	tx := db.Begin()
 
 	var user model.TgUser
-	result := tx.Where("user_id = ? and chat_id = ?", betRecord.UserID, lotteryRecord.ChatID).First(&user)
+	result := tx.Where("tg_user_id = ? and chat_id = ?", betRecord.TgUserID, lotteryRecord.ChatID).First(&user)
 	if result.Error != nil {
 		log.Println("获取用户信息错误:", result.Error)
 		return
