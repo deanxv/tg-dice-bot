@@ -17,8 +17,11 @@
 5. 在 Service -> Add Service，选择 Git（第一次使用需要先授权），选择你 fork 的仓库。
 6. Deploy 会自动开始，先取消。
 7. 添加环境变量
+   
    `SQL_DSN`:`<username>:<password>@tcp(<addr>:<port>)/dice_bot`
+   
    `TELEGRAM_API_TOKEN`:`你的TG机器人的TOKEN`
+   
    保存。
 9. 选择 Redeploy。
 
