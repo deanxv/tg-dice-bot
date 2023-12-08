@@ -13,11 +13,14 @@
 1. 首先 fork 一份代码。
 2. 进入 [Zeabur](https://zeabur.com?referralCode=deanxv)，登录，进入控制台。
 3. 新建一个 Project，在 Service -> Add Service 选择 Marketplace，选择 MySQL，并记下连接参数（用户名、密码、地址、端口）。
-4. 复制链接参数，运行 ```create database `dice_bot` ``` 创建数据库。
-5. 然后在 Service -> Add Service，选择 Git（第一次使用需要先授权），选择你 fork 的仓库。
-6. Deploy 会自动开始，先取消。添加一个 `SQL_DSN`，值为 `<username>:<password>@tcp(<addr>:<port>)/dice_bot`
-   ，再添加一个 `TELEGRAM_API_TOKEN`，值为 `你的TG机器人的TOKEN`，然后保存。
-7. 选择 Redeploy。
+4. 使用mysql视图化工具连接mysql，运行 ```create database `dice_bot` ``` 创建数据库。
+5. 在 Service -> Add Service，选择 Git（第一次使用需要先授权），选择你 fork 的仓库。
+6. Deploy 会自动开始，先取消。
+7. 添加环境变量
+   `SQL_DSN`:`<username>:<password>@tcp(<addr>:<port>)/dice_bot`
+   `TELEGRAM_API_TOKEN`:`你的TG机器人的TOKEN`
+   保存。
+9. 选择 Redeploy。
 
 </div>
 </details>
