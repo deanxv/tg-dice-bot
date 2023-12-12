@@ -15,7 +15,9 @@ _Telegram骰子机器人_
 4. 支持签到奖励
 5. 支持领取低保
 ### 功能截图
-![wecom-temp-878289-9311f6028b1b1fbcba7f7ef3e74b267f.jpg](https://s2.loli.net/2023/12/12/9XpUOligSRhyHzT.jpg)## 部署
+![wecom-temp-878289-9311f6028b1b1fbcba7f7ef3e74b267f.jpg](https://s2.loli.net/2023/12/12/9XpUOligSRhyHzT.jpg)
+
+## 部署
 ### 基于 Docker 进行部署
 ```shell
 docker run --name tg-dice-bot -d --restart always \
