@@ -34,7 +34,7 @@ _Telegram骰子机器人_
 
 ### 功能截图
 
-![wecom-temp-878289-9311f6028b1b1fbcba7f7ef3e74b267f.jpg](https://s2.loli.net/2023/12/12/9XpUOligSRhyHzT.jpg)
+![](https://ibb.co/w7trc1s)
 
 ## 部署
 
