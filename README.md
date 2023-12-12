@@ -27,6 +27,7 @@ docker run --name tg-dice-bot -d --restart always \
 deanxv/tg-dice-bot
 ```
 其中，`SQL_DSN`,`REDIS_CONN_STRING`,`TELEGRAM_API_TOKEN`修改为自己的。
+
 如果上面的镜像无法拉取，可以尝试使用 GitHub 的 Docker 镜像，将上面的 `deanxv/tg-dice-bot` 替换为 `ghcr.io/deanxv/tg-dice-bot` 即可。
 
 
