@@ -14,6 +14,22 @@ _Telegram骰子机器人_
 3. 支持积分系统
 4. 支持签到奖励
 5. 支持领取低保
+
+## 支持命令如下
+```
+/help 帮助
+/start 开启
+/stop 关闭
+/register 用户注册
+/sign 用户签到
+/my 查询积分
+/myhistory 查询历史下注记录
+/iampoor 领取低保
+玩法例子(竞猜-单,下注-20): #单 20
+默认开奖周期: 1分钟
+```
+
+
 ### 功能截图
 ![wecom-temp-878289-9311f6028b1b1fbcba7f7ef3e74b267f.jpg](https://s2.loli.net/2023/12/12/9XpUOligSRhyHzT.jpg)
 
