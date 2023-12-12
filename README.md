@@ -1,6 +1,15 @@
 # tg-dice-bot
 
 ## 部署
+### 基于 Docker 进行部署
+```shell
+docker run --name tg-dice-bot -d --restart always \
+-e SQL_DSN="root:123456@tcp(localhost:3306)/dice_bot" \
+-e REDIS_CONN_STRING="redis://default:<password>@<addr>:<port>" \
+-e TELEGRAM_API_TOKEN="683091xxxxxxxxxxxxxxxxywDuU" \
+deanxv/tg-dice-bot
+```
+其中，`SQL_DSN`,`REDIS_CONN_STRING`,`TELEGRAM_API_TOKEN`修改为自己的。
 
 ### 部署到第三方平台
 
