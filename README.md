@@ -34,7 +34,7 @@ _Telegram骰子机器人_
 
 ### 功能截图
 
-![](https://ibb.co/w7trc1s)
+<a href="https://ibb.co/w7trc1s"><img src="https://i.ibb.co/W0CpV1t/1702388966442.gif" alt="1702388966442" border="0"></a>
 
 ## 部署
 
