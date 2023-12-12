@@ -19,7 +19,9 @@
 7. 添加环境变量
    
    `SQL_DSN`:`<username>:<password>@tcp(<addr>:<port>)/dice_bot`
-   
+
+   `REDIS_CONN_STRING`:`redis://default:<password>@<addr>:<port>`
+
    `TELEGRAM_API_TOKEN`:`你的TG机器人的TOKEN`
    
    保存。
@@ -33,4 +35,5 @@
 ### 环境变量
 
 1. `SQL_DSN`：`SQL_DSN=root:123456@tcp(localhost:3306)/dice_bot`
-2. `TELEGRAM_API_TOKEN`：`683091xxxxxxxxxxxxxxxxywDuU` 你的TG机器人的TOKEN
+2. `REDIS_CONN_STRING`：`REDIS_CONN_STRING:redis://default:<password>@<addr>:<port>`
+3. `TELEGRAM_API_TOKEN`：`683091xxxxxxxxxxxxxxxxywDuU` 你的TG机器人的TOKEN
