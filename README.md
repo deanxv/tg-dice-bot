@@ -1,4 +1,21 @@
+<div align="center">
+
 # tg-dice-bot
+
+_Telegram骰子机器人_
+
+<a href="https://t.me/+HOSNzxTdUnIxNjdl" style="font-size: 20px;">点击进入TG群体验</a>
+
+</div>
+
+## 功能
+1. 记录开奖历史
+2. 记录下注记录
+3. 支持积分系统
+4. 支持签到奖励
+5. 支持领取低保
+### 功能截图
+![](https://pic.imgdb.cn/item/656ab926c458853aef16942b.jpg)
 
 ## 部署
 ### 基于 Docker 进行部署
