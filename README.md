@@ -32,9 +32,10 @@ _Telegram骰子机器人_
 默认开奖周期: 1分钟
 ```
 
-### 功能截图
+### 功能示例
 
-<a href="https://ibb.co/w7trc1s"><img src="https://i.ibb.co/W0CpV1t/1702388966442.gif" alt="1702388966442" border="0"></a>
+![IMG](https://s2.loli.net/2023/12/12/Y6mBkRM94rUKLul.gif)
+
 
 ## 部署
 
