@@ -15,8 +15,7 @@ _Telegram骰子机器人_
 4. 支持签到奖励
 5. 支持领取低保
 ### 功能截图
-![](https://pic.imgdb.cn/item/656ab926c458853aef16942b.jpg)
-
+<img src="https://pic.imgdb.cn/item/656ab926c458853aef16942b.jpg" alt="wecom-temp-878289-9311f6028b1b1fbcba7f7ef3e74b267f.jpg">
 ## 部署
 ### 基于 Docker 进行部署
 ```shell
