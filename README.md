@@ -62,10 +62,18 @@ deanxv/tg-dice-bot
 
 > Zeabur 的服务器在国外，自动解决了网络的问题，同时免费的额度也足够个人使用
 
+点击一键部署:
+
+[![Deploy on Zeabur](https://zeabur.com/button.svg)](https://zeabur.com/templates/SEFL7Z?referralCode=deanxv)
+
+**一键部署后 `SQL_DSN` `REDIS_CONN_STRING` `TELEGRAM_API_TOKEN`变量也需要替换！**
+
+或手动部署:
+
 1. 首先 fork 一份代码。
 2. 进入 [Zeabur](https://zeabur.com?referralCode=deanxv)，登录，进入控制台。
-3. 新建一个 Project，在 Service -> Add Service 选择 Marketplace，选择 MySQL，并记下连接参数（用户名、密码、地址、端口）。
-4. 新建一个 Project，在 Service -> Add Service 选择 Marketplace，选择 Redis，并记下连接参数（密码、地址、端口）。
+3. 新建一个 Project，在 Service -> Add Service 选择 prebuilt，选择 MySQL，并记下连接参数（用户名、密码、地址、端口）。
+4. 新建一个 Project，在 Service -> Add Service 选择 prebuilt，选择 Redis，并记下连接参数（密码、地址、端口）。
 5. 使用mysql视图化工具连接mysql，运行 ```create database `dice_bot` ``` 创建数据库。
 6. 在 Service -> Add Service，选择 Git（第一次使用需要先授权），选择你 fork 的仓库。
 7. Deploy 会自动开始，先取消。
@@ -82,6 +90,8 @@ deanxv/tg-dice-bot
 
 </div>
 </details>
+
+
 
 ## 配置
 
