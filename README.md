@@ -39,6 +39,53 @@ _Telegram骰子机器人_
 
 ## 部署
 
+### 基于 Docker-Compose(All In One) 进行部署
+
+```shell
+docker-compose pull && docker-compose up -d
+```
+
+#### docker-compose.yml
+```docker
+version: '3.4'
+
+services:
+  tg-dice-bot:
+    image: ghcr.io/deanxv/tg-dice-bot:latest
+    container_name: tg-dice-bot
+    restart: always
+    volumes:
+      - ./data/tgdicebot:/data
+    environment:
+      - MYSQL_DSN=tgdicebot:123456@tcp(db:3306)/dice_bot  # 可修改此行 SQL连接信息
+      - REDIS_CONN_STRING=redis://redis
+      - TZ=Asia/Shanghai
+      - TELEGRAM_API_TOKEN=6830xxxxxxxxxxxxxxxx3GawBHc7ywDuU  # 必须修改此行telegram-bot的token
+    depends_on:
+      - redis
+      - db
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: always
+
+  db:
+    image: mysql:8.2.0
+    restart: always
+    container_name: mysql
+    volumes:
+      - ./data/mysql:/var/lib/mysql  # 挂载目录，持久化存储
+    ports:
+      - '3306:3306'
+    environment:
+      TZ: Asia/Shanghai   # 可修改默认时区
+      MYSQL_ROOT_PASSWORD: 'root@123456' # 可修改此行 root用户名 密码
+      MYSQL_USER: tgdicebot   # 可修改初始化专用用户用户名
+      MYSQL_PASSWORD: '123456'    # 可修改初始化专用用户密码
+      MYSQL_DATABASE: dice_bot   # 可修改初始化专用数据库
+```
+
 ### 基于 Docker 进行部署
 
 ```shell
