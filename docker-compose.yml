@@ -8,10 +8,10 @@ services:
     volumes:
       - ./data/tgdicebot:/data
     environment:
-      - SQL_DSN=tgdicebot:123456@tcp(db:3306)/dice_bot  # 请修改此行 SQL连接信息
+      - MYSQL_DSN=tgdicebot:123456@tcp(db:3306)/dice_bot  # 请修改此行 SQL连接信息
       - REDIS_CONN_STRING=redis://redis
       - TZ=Asia/Shanghai
-      - TELEGRAM_API_TOKEN=123xxxxxxxxxyx57W2v1u123ew11  # 请修改此行 telegram-bot的token
+      - TELEGRAM_API_TOKEN=6830xxxxxxxxxxxxxxxxxxxGawBHc7ywDuU  # 请修改此行 telegram-bot的token
     depends_on:
       - redis
       - db
