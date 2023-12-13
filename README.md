@@ -49,7 +49,7 @@ docker run --name tg-dice-bot -d --restart always \
 deanxv/tg-dice-bot
 ```
 
-其中，`SQL_DSN`,`REDIS_CONN_STRING`,`TELEGRAM_API_TOKEN`修改为自己的。
+其中，`SQL_DSN`,`REDIS_CONN_STRING`,`TELEGRAM_API_TOKEN`修改为自己的，Mysql中新建名为`dice_bot`的db。
 
 如果上面的镜像无法拉取，可以尝试使用 GitHub 的 Docker 镜像，将上面的 `deanxv/tg-dice-bot`
 替换为 `ghcr.io/deanxv/tg-dice-bot` 即可。
@@ -65,10 +65,11 @@ deanxv/tg-dice-bot
 1. 首先 fork 一份代码。
 2. 进入 [Zeabur](https://zeabur.com?referralCode=deanxv)，登录，进入控制台。
 3. 新建一个 Project，在 Service -> Add Service 选择 Marketplace，选择 MySQL，并记下连接参数（用户名、密码、地址、端口）。
-4. 使用mysql视图化工具连接mysql，运行 ```create database `dice_bot` ``` 创建数据库。
-5. 在 Service -> Add Service，选择 Git（第一次使用需要先授权），选择你 fork 的仓库。
-6. Deploy 会自动开始，先取消。
-7. 添加环境变量
+4. 新建一个 Project，在 Service -> Add Service 选择 Marketplace，选择 Redis，并记下连接参数（密码、地址、端口）。
+5. 使用mysql视图化工具连接mysql，运行 ```create database `dice_bot` ``` 创建数据库。
+6. 在 Service -> Add Service，选择 Git（第一次使用需要先授权），选择你 fork 的仓库。
+7. Deploy 会自动开始，先取消。
+8. 添加环境变量
 
    `SQL_DSN`:`<username>:<password>@tcp(<addr>:<port>)/dice_bot`
 
