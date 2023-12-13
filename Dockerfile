@@ -24,14 +24,12 @@ FROM alpine
 # 安装基本的运行时依赖
 RUN apk --no-cache add ca-certificates tzdata
 
-# 设置工作目录
-WORKDIR /data
-
 # 从构建阶段复制可执行文件
 COPY --from=builder /tg-dice-bot .
 
 # 暴露端口
 EXPOSE 3000
-
+# 工作目录
+WORKDIR /data
 # 设置入口命令
-CMD ["./tg-dice-bot"]
+ENTRYPOINT ["/tg-dice-bot"]
