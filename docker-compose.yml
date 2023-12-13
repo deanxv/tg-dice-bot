@@ -8,10 +8,10 @@ services:
     volumes:
       - ./data/tgdicebot:/data
     environment:
-      - MYSQL_DSN=tgdicebot:123456@tcp(db:3306)/dice_bot  # 请修改此行 SQL连接信息
+      - MYSQL_DSN=tgdicebot:123456@tcp(db:3306)/dice_bot  # 可修改此行 SQL连接信息
       - REDIS_CONN_STRING=redis://redis
       - TZ=Asia/Shanghai
-      - TELEGRAM_API_TOKEN=6830xxxxxxxxxxxxxxxxxxxGawBHc7ywDuU  # 请修改此行 telegram-bot的token
+      - TELEGRAM_API_TOKEN=6830xxxxxxxxxxxxxxxx3GawBHc7ywDuU  # 必须修改此行telegram-bot的token
     depends_on:
       - redis
       - db
@@ -30,8 +30,8 @@ services:
     ports:
       - '3306:3306'
     environment:
-      TZ: Asia/Shanghai   # 设置时区
-      MYSQL_ROOT_PASSWORD: 'root@123456' # 请修改此行 root用户名 密码
-      MYSQL_USER: tgdicebot   # 创建专用用户
-      MYSQL_PASSWORD: '123456'    # 设置专用用户密码
-      MYSQL_DATABASE: dice_bot   # 自动创建数据库
+      TZ: Asia/Shanghai   # 可修改默认时区
+      MYSQL_ROOT_PASSWORD: 'root@123456' # 可修改此行 root用户名 密码
+      MYSQL_USER: tgdicebot   # 可修改初始化专用用户用户名
+      MYSQL_PASSWORD: '123456'    # 可修改初始化专用用户密码
+      MYSQL_DATABASE: dice_bot   # 可修改初始化专用数据库
