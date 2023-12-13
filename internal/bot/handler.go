@@ -45,6 +45,9 @@ func handleBettingHistoryQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Cal
 	sentMsg, err := bot.Send(msg)
 	if err != nil {
 		log.Println("发送消息异常:", err)
+		// 检查错误是否为用户阻止了机器人
+		delConfigByBlocked(err, callbackQuery.Message.Chat.ID)
+		return
 	}
 
 	go func(messageID int) {
@@ -55,6 +58,14 @@ func handleBettingHistoryQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Cal
 			log.Println("删除消息异常:", err)
 		}
 	}(sentMsg.MessageID)
+}
+
+func delConfigByBlocked(err error, chatID int64) {
+	if err != nil && strings.Contains(err.Error(), "Forbidden: bot was blocked") {
+		log.Printf("The bot was blocked ChatId: %v", chatID)
+		// 对话已被用户阻止 删除对话配置
+		db.Where("chat_id = ?", chatID).Delete(&model.ChatDiceConfig{})
+	}
 }
 
 // generateBettingHistoryMessage 生成开奖历史消息文本。
@@ -124,6 +135,7 @@ func handleBettingCommand(bot *tgbotapi.BotAPI, userID int64, chatID int64, mess
 		_, err := bot.Send(registrationMsg)
 		if err != nil {
 			log.Println("功能未开启提示消息异常:", err)
+			delConfigByBlocked(err, chatID)
 		}
 		return
 	} else if err != nil {
@@ -138,6 +150,7 @@ func handleBettingCommand(bot *tgbotapi.BotAPI, userID int64, chatID int64, mess
 		replyMsg := tgbotapi.NewMessage(chatID, "当前暂无开奖活动!")
 		replyMsg.ReplyToMessageID = messageID
 		_, err = bot.Send(replyMsg)
+		delConfigByBlocked(err, chatID)
 		return
 	} else if issueNumberResult.Err() != nil {
 		log.Println("获取值时发生异常:", issueNumberResult.Err())
@@ -161,6 +174,7 @@ func handleBettingCommand(bot *tgbotapi.BotAPI, userID int64, chatID int64, mess
 	_, err = bot.Send(replyMsg)
 	if err != nil {
 		log.Println("发送消息异常:", err)
+		delConfigByBlocked(err, chatID)
 	}
 }
 
@@ -181,6 +195,7 @@ func storeBetRecord(bot *tgbotapi.BotAPI, userID int64, chatID int64, issueNumbe
 		_, err := bot.Send(registrationMsg)
 		if err != nil {
 			log.Println("发送注册提示消息异常:", err)
+			delConfigByBlocked(err, chatID)
 			return err
 		}
 		return result.Error
@@ -194,6 +209,7 @@ func storeBetRecord(bot *tgbotapi.BotAPI, userID int64, chatID int64, issueNumbe
 		_, err := bot.Send(balanceInsufficientMsg)
 		if err != nil {
 			log.Println("您的余额不足提示异常:", err)
+			delConfigByBlocked(err, chatID)
 			return err
 		} else {
 			return errors.New("余额不足")
@@ -239,7 +255,8 @@ func handleGroupCommand(bot *tgbotapi.BotAPI, username string, chatMember tgbota
 		if !chatMember.IsAdministrator() && !chatMember.IsCreator() {
 			msgConfig := tgbotapi.NewMessage(chatID, "请勿使用管理员命令")
 			msgConfig.ReplyToMessageID = messageID
-			sendMessage(bot, &msgConfig)
+			_, err := sendMessage(bot, &msgConfig)
+			delConfigByBlocked(err, chatID)
 			return
 		}
 		handleStartCommand(bot, chatID, messageID)
@@ -247,7 +264,8 @@ func handleGroupCommand(bot *tgbotapi.BotAPI, username string, chatMember tgbota
 		if !chatMember.IsAdministrator() && !chatMember.IsCreator() {
 			msgConfig := tgbotapi.NewMessage(chatID, "请勿使用管理员命令")
 			msgConfig.ReplyToMessageID = messageID
-			sendMessage(bot, &msgConfig)
+			_, err := sendMessage(bot, &msgConfig)
+			delConfigByBlocked(err, chatID)
 			return
 		}
 		handleStopCommand(bot, chatID, messageID)
@@ -283,14 +301,16 @@ func handleRegisterCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember,
 		} else {
 			msgConfig := tgbotapi.NewMessage(chatID, "注册成功！奖励1000积分！")
 			msgConfig.ReplyToMessageID = messageID
-			sendMessage(bot, &msgConfig)
+			_, err := sendMessage(bot, &msgConfig)
+			delConfigByBlocked(err, chatID)
 		}
 	} else if result.Error != nil {
 		log.Println("查询异常:", result.Error)
 	} else {
 		msgConfig := tgbotapi.NewMessage(chatID, "请勿重复注册！")
 		msgConfig.ReplyToMessageID = messageID
-		sendMessage(bot, &msgConfig)
+		_, err := sendMessage(bot, &msgConfig)
+		delConfigByBlocked(err, chatID)
 	}
 }
 
@@ -307,7 +327,8 @@ func handleSignInCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, c
 		// 没有找到记录
 		msgConfig := tgbotapi.NewMessage(chatID, "请发送 /register 注册用户！")
 		msgConfig.ReplyToMessageID = messageID
-		sendMessage(bot, &msgConfig)
+		_, err := sendMessage(bot, &msgConfig)
+		delConfigByBlocked(err, chatID)
 		return
 	} else if result.Error != nil {
 		log.Println("查询异常:", result.Error)
@@ -324,7 +345,8 @@ func handleSignInCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, c
 			if !signInTime.Before(currentMidnight) {
 				msgConfig := tgbotapi.NewMessage(chatID, "今天已签到过了哦！")
 				msgConfig.ReplyToMessageID = messageID
-				sendMessage(bot, &msgConfig)
+				_, err := sendMessage(bot, &msgConfig)
+				delConfigByBlocked(err, chatID)
 				return
 			}
 		}
@@ -333,7 +355,8 @@ func handleSignInCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, c
 		result = db.Save(&user)
 		msgConfig := tgbotapi.NewMessage(chatID, "签到成功！奖励1000积分！")
 		msgConfig.ReplyToMessageID = messageID
-		sendMessage(bot, &msgConfig)
+		_, err := sendMessage(bot, &msgConfig)
+		delConfigByBlocked(err, chatID)
 	}
 }
 
@@ -344,8 +367,11 @@ func handleMyCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatI
 		// 没有找到记录
 		msgConfig := tgbotapi.NewMessage(chatID, "请发送 /register 注册用户！")
 		msgConfig.ReplyToMessageID = messageID
-		sentMsg, _ := sendMessage(bot, &msgConfig)
-
+		sentMsg, err := sendMessage(bot, &msgConfig)
+		if err != nil {
+			delConfigByBlocked(err, chatID)
+			return
+		}
 		go func(messageID int) {
 			time.Sleep(1 * time.Minute)
 			deleteMsg := tgbotapi.NewDeleteMessage(chatID, messageID)
@@ -359,8 +385,11 @@ func handleMyCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, chatI
 	} else {
 		msgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("%s 您的积分余额为%d", chatMember.User.FirstName, user.Balance))
 		msgConfig.ReplyToMessageID = messageID
-		sentMsg, _ := sendMessage(bot, &msgConfig)
-
+		sentMsg, err := sendMessage(bot, &msgConfig)
+		if err != nil {
+			delConfigByBlocked(err, chatID)
+			return
+		}
 		go func(messageID int) {
 			time.Sleep(1 * time.Minute)
 			deleteMsg := tgbotapi.NewDeleteMessage(chatID, messageID)
@@ -384,7 +413,8 @@ func handlePoorCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, cha
 		// 没有找到记录
 		msgConfig := tgbotapi.NewMessage(chatID, "请发送 /register 注册用户！")
 		msgConfig.ReplyToMessageID = messageID
-		sendMessage(bot, &msgConfig)
+		_, err := sendMessage(bot, &msgConfig)
+		delConfigByBlocked(err, chatID)
 	} else if result.Error != nil {
 		log.Println("查询异常:", result.Error)
 	} else {
@@ -401,14 +431,16 @@ func handlePoorCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, cha
 			if user.Balance >= 1000 {
 				msgConfig := tgbotapi.NewMessage(chatID, "1000积分以下才可以领取低保哦")
 				msgConfig.ReplyToMessageID = messageID
-				sendMessage(bot, &msgConfig)
+				_, err := sendMessage(bot, &msgConfig)
+				delConfigByBlocked(err, chatID)
 				return
 			}
 			user.Balance += 1000
 			result = db.Save(&user)
 			msgConfig := tgbotapi.NewMessage(chatID, "领取低保成功！获得1000积分！")
 			msgConfig.ReplyToMessageID = messageID
-			sendMessage(bot, &msgConfig)
+			_, err := sendMessage(bot, &msgConfig)
+			delConfigByBlocked(err, chatID)
 			return
 		} else if err != nil {
 			log.Println("查询下注记录异常", result.Error)
@@ -416,7 +448,8 @@ func handlePoorCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember, cha
 		} else {
 			msgConfig := tgbotapi.NewMessage(chatID, "您有未开奖的下注记录,开奖结算后再领取吧!")
 			msgConfig.ReplyToMessageID = messageID
-			sendMessage(bot, &msgConfig)
+			_, err := sendMessage(bot, &msgConfig)
+			delConfigByBlocked(err, chatID)
 		}
 	}
 }
@@ -466,7 +499,8 @@ func handleStopCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 	if errors.Is(chatDiceConfigResult.Error, gorm.ErrRecordNotFound) {
 		msgConfig := tgbotapi.NewMessage(chatID, "开启后才可关闭！")
 		msgConfig.ReplyToMessageID = messageID
-		sendMessage(bot, &msgConfig)
+		_, err := sendMessage(bot, &msgConfig)
+		delConfigByBlocked(err, chatID)
 		return
 	} else if chatDiceConfigResult.Error != nil {
 		log.Println("开奖配置初始化异常", chatDiceConfigResult.Error)
@@ -482,7 +516,11 @@ func handleStopCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 
 	msgConfig := tgbotapi.NewMessage(chatID, "已关闭")
 	msgConfig.ReplyToMessageID = messageID
-	sendMessage(bot, &msgConfig)
+	_, err := sendMessage(bot, &msgConfig)
+	if err != nil {
+		delConfigByBlocked(err, chatID)
+		return
+	}
 	stopDice(chatID)
 }
 
@@ -513,7 +551,11 @@ func handleStartCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 
 	msgConfig := tgbotapi.NewMessage(chatID, "已开启")
 	msgConfig.ReplyToMessageID = messageID
-	sendMessage(bot, &msgConfig)
+	_, err := sendMessage(bot, &msgConfig)
+	if err != nil {
+		delConfigByBlocked(err, chatID)
+		return
+	}
 
 	issueNumber := time.Now().Format("20060102150405")
 
@@ -522,9 +564,13 @@ func handleStartCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 	issueNumberResult := redisDB.Get(redisDB.Context(), redisKey)
 	if errors.Is(issueNumberResult.Err(), redis.Nil) || issueNumberResult == nil {
 		lotteryDrawTipMsgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("第%s期 %d分钟后开奖", issueNumber, chatDiceConfig.LotteryDrawCycle))
-		sendMessage(bot, &lotteryDrawTipMsgConfig)
+		_, err := sendMessage(bot, &lotteryDrawTipMsgConfig)
+		if err != nil {
+			delConfigByBlocked(err, chatID)
+			return
+		}
 		// 存储当前期号和对话ID
-		err := redisDB.Set(redisDB.Context(), redisKey, issueNumber, 0).Err()
+		err = redisDB.Set(redisDB.Context(), redisKey, issueNumber, 0).Err()
 		if err != nil {
 			log.Println("存储新期号和对话ID异常:", err)
 			return
@@ -536,7 +582,11 @@ func handleStartCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 		result, _ := issueNumberResult.Result()
 		issueNumber = result
 		lotteryDrawTipMsgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("第%s期 %d分钟后开奖", issueNumber, chatDiceConfig.LotteryDrawCycle))
-		sendMessage(bot, &lotteryDrawTipMsgConfig)
+		_, err := sendMessage(bot, &lotteryDrawTipMsgConfig)
+		if err != nil {
+			delConfigByBlocked(err, chatID)
+			return
+		}
 	}
 
 	//redisKey := fmt.Sprintf(RedisCurrentIssueKey, chatID)
@@ -558,6 +608,7 @@ func handleHelpCommand(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 	msgConfig.ReplyToMessageID = messageID
 	sentMsg, err := sendMessage(bot, &msgConfig)
 	if err != nil {
+		delConfigByBlocked(err, chatID)
 		return
 	}
 	go func(messageID int) {
@@ -584,7 +635,11 @@ func handleMyHistoryCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember
 	if len(betRecords) == 0 {
 		// 下注记录为空
 		msgConfig.Text = "您还没有下注记录哦!"
-		sendMessage(bot, &msgConfig)
+		_, err := sendMessage(bot, &msgConfig)
+		if err != nil {
+			delConfigByBlocked(err, chatID)
+			return
+		}
 		return
 	} else if err != nil {
 		log.Println("查询下注记录异常", err)
@@ -615,8 +670,11 @@ func handleMyHistoryCommand(bot *tgbotapi.BotAPI, chatMember tgbotapi.ChatMember
 		}
 
 		msgConfig.Text = msgText
-		sentMsg, _ := sendMessage(bot, &msgConfig)
-
+		sentMsg, err := sendMessage(bot, &msgConfig)
+		if err != nil {
+			delConfigByBlocked(err, chatID)
+			return
+		}
 		go func(messageID int) {
 			time.Sleep(1 * time.Minute)
 			deleteMsg := tgbotapi.NewDeleteMessage(chatID, messageID)
@@ -716,7 +774,11 @@ func handleDiceRoll(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) (nex
 
 	currentTime := time.Now().Format("2006-01-02 15:04:05")
 
-	diceValues := rollDice(bot, chatID, 3)
+	diceValues, err := rollDice(bot, chatID, 3)
+	if err != nil {
+		delConfigByBlocked(err, chatID)
+		return
+	}
 	count := sumDiceValues(diceValues)
 	singleOrDouble, bigOrSmall := determineResult(count)
 
@@ -737,14 +799,22 @@ func handleDiceRoll(bot *tgbotapi.BotAPI, chatID int64, issueNumber string) (nex
 
 	msg := tgbotapi.NewMessage(chatID, message)
 	msg.ReplyMarkup = keyboard
-	sendMessage(bot, &msg)
+	_, err = sendMessage(bot, &msg)
+	if err != nil {
+		delConfigByBlocked(err, chatID)
+		return
+	}
 
 	//issueNumberInt, _ := strconv.Atoi(issueNumber)
 	nextIssueNumber = time.Now().Format("20060102150405")
 	var chatDiceConfig model.ChatDiceConfig
 	db.Where("enable = ? AND chat_id = ?", 1, chatID).First(&chatDiceConfig)
 	lotteryDrawTipMsgConfig := tgbotapi.NewMessage(chatID, fmt.Sprintf("第%s期 %d分钟后开奖", nextIssueNumber, chatDiceConfig.LotteryDrawCycle))
-	sendMessage(bot, &lotteryDrawTipMsgConfig)
+	_, err = sendMessage(bot, &lotteryDrawTipMsgConfig)
+	if err != nil {
+		delConfigByBlocked(err, chatID)
+		return
+	}
 
 	// 设置新的期号和对话ID
 	err = redisDB.Set(redisDB.Context(), redisKey, nextIssueNumber, 0).Err()
@@ -829,16 +899,20 @@ func updateBalance(betRecord *model.BetRecord, lotteryRecord *model.LotteryRecor
 }
 
 // rollDice 模拟多次掷骰子。
-func rollDice(bot *tgbotapi.BotAPI, chatID int64, numDice int) []int {
+func rollDice(bot *tgbotapi.BotAPI, chatID int64, numDice int) ([]int, error) {
 	diceValues := make([]int, numDice)
 	diceConfig := tgbotapi.NewDiceWithEmoji(chatID, "🎲")
 
 	for i := 0; i < numDice; i++ {
-		diceMsg, _ := bot.Send(diceConfig)
+		diceMsg, err := bot.Send(diceConfig)
+		if err != nil {
+			log.Println("发送骰子消息异常:", err)
+			return nil, err
+		}
 		diceValues[i] = diceMsg.Dice.Value
 	}
 
-	return diceValues
+	return diceValues, nil
 }
 
 // sumDiceValues 计算骰子值的总和。
