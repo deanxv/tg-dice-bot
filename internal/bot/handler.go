@@ -61,11 +61,18 @@ func handleBettingHistoryQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Cal
 }
 
 func delConfigByBlocked(err error, chatID int64) {
-	if err != nil && strings.Contains(err.Error(), "Forbidden: bot was blocked") {
-		log.Printf("The bot was blocked ChatId: %v", chatID)
-		// 对话已被用户阻止 删除对话配置
-		db.Where("chat_id = ?", chatID).Delete(&model.ChatDiceConfig{})
+	if err != nil {
+		if strings.Contains(err.Error(), "Forbidden: bot was blocked") {
+			log.Printf("The bot was blocked ChatId: %v", chatID)
+			// 对话已被用户阻止 删除对话配置
+			db.Where("chat_id = ?", chatID).Delete(&model.ChatDiceConfig{})
+		} else if strings.Contains(err.Error(), "Forbidden: bot was kicked") {
+			log.Printf("The bot was kicked ChatId: %v", chatID)
+			// 对话已被踢出群聊 删除对话配置
+			db.Where("chat_id = ?", chatID).Delete(&model.ChatDiceConfig{})
+		}
 	}
+
 }
 
 // generateBettingHistoryMessage 生成开奖历史消息文本。
