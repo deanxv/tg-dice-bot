@@ -90,13 +90,13 @@ services:
 
 ```shell
 docker run --name tg-dice-bot -d --restart always \
--e SQL_DSN="root:123456@tcp(localhost:3306)/dice_bot" \
+-e MYSQL_DSN="root:123456@tcp(localhost:3306)/dice_bot" \
 -e REDIS_CONN_STRING="redis://default:<password>@<addr>:<port>" \
 -e TELEGRAM_API_TOKEN="683091xxxxxxxxxxxxxxxxywDuU" \
 deanxv/tg-dice-bot
 ```
 
-其中，`SQL_DSN`,`REDIS_CONN_STRING`,`TELEGRAM_API_TOKEN`修改为自己的，Mysql中新建名为`dice_bot`的db。
+其中，`MYSQL_DSN`,`REDIS_CONN_STRING`,`TELEGRAM_API_TOKEN`修改为自己的，Mysql中新建名为`dice_bot`的db。
 
 如果上面的镜像无法拉取，可以尝试使用 GitHub 的 Docker 镜像，将上面的 `deanxv/tg-dice-bot`
 替换为 `ghcr.io/deanxv/tg-dice-bot` 即可。
@@ -113,7 +113,7 @@ deanxv/tg-dice-bot
 
 [![Deploy on Zeabur](https://zeabur.com/button.svg)](https://zeabur.com/templates/SEFL7Z?referralCode=deanxv)
 
-**一键部署后 `SQL_DSN` `REDIS_CONN_STRING` `TELEGRAM_API_TOKEN`变量也需要替换！**
+**一键部署后 `MYSQL_DSN` `REDIS_CONN_STRING` `TELEGRAM_API_TOKEN`变量也需要替换！**
 
 或手动部署:
 
@@ -126,7 +126,7 @@ deanxv/tg-dice-bot
 7. Deploy 会自动开始，先取消。
 8. 添加环境变量
 
-   `SQL_DSN`:`<username>:<password>@tcp(<addr>:<port>)/dice_bot`
+   `MYSQL_DSN`:`<username>:<password>@tcp(<addr>:<port>)/dice_bot`
 
    `REDIS_CONN_STRING`:`redis://default:<password>@<addr>:<port>`
 
@@ -144,6 +144,6 @@ deanxv/tg-dice-bot
 
 ### 环境变量
 
-1. `SQL_DSN`：`SQL_DSN=root:123456@tcp(localhost:3306)/dice_bot`
+1. `MYSQL_DSN`：`MYSQL_DSN=root:123456@tcp(localhost:3306)/dice_bot`
 2. `REDIS_CONN_STRING`：`REDIS_CONN_STRING:redis://default:<password>@<addr>:<port>`
 3. `TELEGRAM_API_TOKEN`：`683091xxxxxxxxxxxxxxxxywDuU` 你的TG机器人的TOKEN
