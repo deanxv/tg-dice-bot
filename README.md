@@ -4,7 +4,7 @@
 
 _Telegram骰子机器人_
 
-<a href="https://t.me/+HOSNzxTdUnIxNjdl" style="font-size: 20px;">点击进入TG群体验</a>
+该骰子机器人项目已**升级**为功能更强大的<a href="https://github.com/deanxv/telegram-dice-bot" style="font-size: 20px;">Telegram-Dice-Bot 骰子娱乐机器人</a>
 
 </div>
 
